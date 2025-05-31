@@ -1,5 +1,5 @@
 <template>
-    <div v-if="wallet.account">
+    <div class="flex flex-col items-end w-full" v-if="wallet.account">
         <p><strong>Address:</strong> {{ wallet.account }}</p>
         <p><strong>Network:</strong> {{ wallet.networkName }}</p>
         <p><strong>USDC Balance:</strong> {{ wallet.usdcBalance }} USDC</p>
