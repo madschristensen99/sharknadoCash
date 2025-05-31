@@ -2,8 +2,6 @@
 
 ![SharknadoCash Logo](assets/sharknado.png)
 
-## 👉 [Try the Demo](https://fungerbil.com/sharknado/index.html)
-
 ## 🔐 What is Monero and Why it Matters
 
 Monero (XMR) is a leading privacy-focused cryptocurrency that provides strong anonymity guarantees through ring signatures, stealth addresses, and RingCT technology. Unlike Bitcoin and most other cryptocurrencies, Monero transactions are completely private by default - hiding the sender, recipient, and transaction amount from public view. This makes Monero the gold standard for financial privacy in the cryptocurrency space.
@@ -23,7 +21,7 @@ SharknadoCash bridges this gap by bringing Monero's privacy guarantees to EVM ch
 
 SharknadoCash is a system for creating and managing synthetic Monero (sXMR) tokens on EVM-compatible blockchains. The system allows users to mint sXMR tokens backed by collateral, with the price of Monero determined by a Pyth price oracle. Additionally, our bridging system enables 1:1 sXMR to XMR transfers using vLayer's Web Proofs for verification of Monero blockchain transactions.
 
-[![SharknadoCash UI](assets/sharknadoUI.png)](https://fungerbil.com/sharknado/index.html)
+![SharknadoCash UI](assets/sharknadoUI.png)
 
 **[Try our live demo](https://fungerbil.com/sharknado/index.html)** to experience the mint/burn interface for sXMR tokens.
 
