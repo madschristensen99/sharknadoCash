@@ -87,7 +87,7 @@ const proofBytes = ref("");
 const evmAddress = ref("");
 const amount = ref();
 
-const verifierAddress = "0xf60364B3FA5D3EaAda7989dCd080D369617D59db";
+const verifierAddress = "0x1145CD754e9dfBe5C76B6357eD01900bBe9b543F";
 const abi = verifierJson.abi;
 
 // 0 didn't start proving, 1 waiting for response,

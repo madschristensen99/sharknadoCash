@@ -14,41 +14,7 @@ import WalletInfo from "./components/WalletInfo.vue";
 import CreateProofForm from "./components/CreateProofForm.vue";
 import VerifyProof from "./components/VerifyProof.vue";
 
-const address = ref(null);
-const usdcBalance = ref(null);
 const xmrRate = ref(0);
-
-const connect = async () => {
-    if (!window.ethereum) {
-        throw new Error("MetaMask not found");
-    }
-
-    // Request wallet access
-    await window.ethereum.request({ method: "eth_requestAccounts" });
-
-    const walletClient = createWalletClient({
-        chain: sepolia,
-        transport: custom(window.ethereum),
-    });
-
-    const [account] = await walletClient.getAddresses();
-    address.value = account;
-    console.log(account);
-
-    return { walletClient, publicClient, account };
-};
-
-const sendTransaction = async ({ to, amount }) => {
-    const { walletClient, account } = await connect();
-
-    const hash = await walletClient.sendTransaction({
-        account,
-        to,
-        value: parseEther(amount), // amount in ETH as string
-    });
-
-    return hash;
-};
 
 const checkIfConnected = async () => {
     console.log("mount");
@@ -61,24 +27,6 @@ const checkIfConnected = async () => {
             console.log(address.value);
         }
     }
-};
-
-const fetchUSDCBalance = async () => {
-    await checkIfConnected();
-    const publicClient = createPublicClient({
-        chain: sepolia,
-        transport: http(), // fallback read client (optional)
-    });
-    console.log(publicClient);
-    if (!address.value) return;
-    const balance = await publicClient.readContract({
-        address: USDC_CONTRACT,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [address.value],
-    });
-    console.log(balance);
-    usdcBalance.value = formatUnits(balance, 6); // USDC has 6 decimals
 };
 
 const fetchXMRRate = async () => {
@@ -123,10 +71,7 @@ const fetchXMRRate = async () => {
 };
 
 onMounted(async () => {
-    // publicClient.value = publicClient
-    // await checkIfConnected();
-    // await fetchUSDCBalance();
-    // await fetchXMRRate();
+    await fetchXMRRate();
 });
 </script>
 
@@ -143,6 +88,7 @@ onMounted(async () => {
                 <CreateProofForm class="w-full" />
                 <VerifyProof class="w-full" />
             </div>
+            <div class="text-lg">{{ xmrRate.toFixed(2) }} XMR/USD</div>
         </main>
     </div>
 </template>
