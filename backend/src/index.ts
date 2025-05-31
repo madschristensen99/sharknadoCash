@@ -75,7 +75,7 @@ app.get('/api/zkproof/getProof', async (_req, res) => {
   const result = await vlayer.waitForProvingResult({ hash });
   
   console.log(result);
-  const [proof] = result;
+  const [proof] = result as any;
   console.log("✅ Proof generated");
 
   return res.json({
