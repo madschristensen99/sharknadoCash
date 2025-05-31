@@ -69,16 +69,16 @@
         </button>
         <div
             class="w-full flex flex-col items-center gap-4 justify-center mt-4 p-2 rounded bg-green-500"
-            v-if="proofState === 2"
+            v-if="verifyState === 2"
         >
             <span class="font-bold"> Proof verification was successfull! </span>
         </div>
         <div
             class="w-full flex flex-col items-center gap-4 justify-center mt-4 p-2 rounded bg-red-600"
-            v-if="proofState === 3"
+            v-if="verifyState === 3"
         >
             <span class="font-bold"> Proof verification failed! </span>
-            <p>{{ error }}</p>
+            <p>{{ error.slice(0, 200) }}</p>
         </div>
     </div>
 </template>
@@ -88,13 +88,21 @@ import { ref } from "vue";
 import verifierJson from "@/abi/Verifier.json";
 import { useWalletStore } from "../stores/walletStore";
 import { storeToRefs } from "pinia";
-import { createWalletClient, createPublicClient, http, custom } from "viem";
+import {
+    createWalletClient,
+    createPublicClient,
+    http,
+    custom,
+    erc20Abi,
+} from "viem";
 import { sepolia } from "viem/chains";
 
 const proofBytes = ref("");
 const evmAddress = ref("");
 const amount = ref(1000000000);
 const txId = ref();
+
+const USDC_CONTRACT = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 
 const verifierAddress = "0xA97b067B7740eb4DBfDA2E0865FAE580a88374a4";
 const abi = verifierJson.abi;
@@ -109,7 +117,7 @@ function isValidEvmAddress(address) {
 }
 
 const submitProof = async () => {
-    proofState.value = 1;
+    verifyState.value = 1;
     if (!secretKey.value || !txId.value || !xmrRecipient.value) {
         alert("Secret key and transaction ID Xmr Address are required.");
         return;
@@ -125,9 +133,9 @@ const submitProof = async () => {
         await new Promise((resolve) => setTimeout(resolve, 1500));
     } finally {
         if (true) {
-            proofState.value = 2;
+            verifyState.value = 2;
         } else {
-            proofState.value = 3;
+            verifyState.value = 3;
             error.value = "idk error from api";
         }
     }
@@ -143,6 +151,7 @@ const submitProof = async () => {
 };
 
 const verifyProof = async () => {
+    verifyState.value = 1;
     const wallet = useWalletStore();
 
     await window.ethereum.request({ method: "eth_requestAccounts" });
@@ -162,15 +171,33 @@ const verifyProof = async () => {
     console.log(proofBytes.value, evmAddress.value, txId.value, amount.value);
     console.log(proofArg);
 
-    const result = await walletClient.writeContract({
-        address: verifierAddress,
-        abi: abi,
-        functionName: "verifyDeposit",
-        args: [proofArg, evmAddress.value, txId.value, amount.value],
-        client: walletClient,
-        account: wallet.account,
-    });
+    try {
+        const hash = await walletClient.writeContract({
+            address: verifierAddress,
+            abi: abi,
+            functionName: "verifyDeposit",
+            args: [proofArg, evmAddress.value, txId.value, amount.value],
+            client: walletClient,
+            account: wallet.account,
+        });
 
-    console.log(result);
+        const publicClient = createPublicClient({
+            chain: sepolia,
+            transport: http(),
+        });
+
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+        if (receipt.status !== "success") {
+            throw new Error("Transaction failed or reverted.");
+        }
+    } catch (err) {
+        error.value = err.message || "Unknown error";
+        verifyState.value = 3;
+    } finally {
+        if (!error.value) {
+            verifyState.value = 2;
+        }
+    }
 };
 </script>
