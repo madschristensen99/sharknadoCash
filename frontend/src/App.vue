@@ -10,6 +10,7 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { ref, onMounted } from "vue";
+import WalletInfo from "./components/WalletInfo.vue";
 
 const address = ref(null);
 const usdcBalance = ref(null);
@@ -123,35 +124,14 @@ const fetchXMRRate = async () => {
 
 onMounted(async () => {
     // publicClient.value = publicClient
-
     // await checkIfConnected();
-    await fetchUSDCBalance();
-    await fetchXMRRate();
+    // await fetchUSDCBalance();
+    // await fetchXMRRate();
 });
 </script>
 
 <template>
-    <header>
-        {{ address }}
-        {{ usdcBalance }} USDC (Sepolia)
-        <img
-            alt="Vue logo"
-            class="logo"
-            src="./assets/logo.svg"
-            width="125"
-            height="125"
-            @click="connect()"
-        />
-        <img
-            alt="Vue logo"
-            class="logo"
-            src="./assets/logo.svg"
-            width="125"
-            height="125"
-            @click="sendTransaction()"
-        />
-        {{ xmrRate }} XMR/USD
-    </header>
+    <WalletInfo> </WalletInfo>
 </template>
 
 <style scoped>
