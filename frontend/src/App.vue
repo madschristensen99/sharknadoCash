@@ -16,8 +16,6 @@ const address = ref(null);
 const usdcBalance = ref(null);
 const xmrRate = ref(0);
 
-const USDC_CONTRACT = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-
 const connect = async () => {
     if (!window.ethereum) {
         throw new Error("MetaMask not found");
