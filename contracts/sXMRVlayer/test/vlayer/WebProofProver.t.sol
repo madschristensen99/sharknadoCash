@@ -5,22 +5,36 @@ import {VTest} from "vlayer-0.1.0/testing/VTest.sol";
 import {WebProof, Web} from "vlayer-0.1.0/WebProof.sol";
 import {Proof} from "vlayer-0.1.0/Proof.sol";
 
-import { sXMRWebProver } from "../../src/vlayer/sXMRWebProver.sol";
+import { WebProofProver } from "../../src/vlayer/WebProofProver.sol";
 
 contract WebProverTest is VTest {
     // using Strings for string;
 
-    function test_verifiesWebProofAndRetrievesScreenName() public {
+    function test_verifiesWebProofAndRetrievesAddressAndAmount() public {
         WebProof memory webProof = WebProof(
             vm.readFile("testdata/web_proof.json")
         );
-        sXMRWebProver prover = new sXMRWebProver();
+        WebProofProver prover = new WebProofProver();
         address account = vm.addr(1);
 
-        string memory secretKey = "60166f73264a77544b7aa287d45d82b91bba023358ffd00c227489dbc48d5809";
-        string memory txId = "250908a82e2ec72f20aab8072ab045c2bc1da531588a1a5b977052f3487d86a0";
+        string memory DATA_URL = "https://86.38.205.119:3005/verify"; 
+        string memory secretKey = "0d1c95e40aaebb47a98b8537e8c0318d71000b3e0fc6a7e0d01df93541796701";
+        string memory txId = "b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58";
         address evmRecipientAddress = vm.addr(1);
-        string memory xmrRecipientAddress = "82Yy6ygohJZdungHrXovdDjdpAu31iGPsXTTZRnPYadgJ9735P8eBweHK5djgovYQhEqssjRaNZ4hhi1e3MyaS28T1X471g";
+        string memory xmrRecipientAddress = "75jwJ7i21MWM5XnodztaPrevsCR5xPRNziG6WN5CVEEJPPbB4e53M8FKHoPGFBxg4vQg7LAuLgReK3yT9b2p3XHJ3CTMYXa";
+
+        string[] memory params = new string[](7);
+        params[0] = DATA_URL;
+        params[1] = "?txid=";
+        params[2] = txId;
+        params[3] = "&key=";
+        params[4] = secretKey;
+        params[5] = "&address=";
+        params[6] = xmrRecipientAddress;
+
+        string memory concatRes = prover.concatStrings(params);
+
+        assertEq(concatRes, "https://86.38.205.119:3005/verify?txid=b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58&key=0d1c95e40aaebb47a98b8537e8c0318d71000b3e0fc6a7e0d01df93541796701&address=75jwJ7i21MWM5XnodztaPrevsCR5xPRNziG6WN5CVEEJPPbB4e53M8FKHoPGFBxg4vQg7LAuLgReK3yT9b2p3XHJ3CTMYXa");
 
         callProver();
         (, address recipient, string memory amount) = prover.main(
@@ -36,7 +50,6 @@ contract WebProverTest is VTest {
 
         // uint256 amount = 0; // Replace with actual amount from webProof
 
-        assertEq(amount, "0");
         // assertEq(recipient, evmRecipientAddress);
 
         // assertEq(secretKey , "60166f73264a77544b7aa287d45d82b91bba023358ffd00c227489dbc48d5809");

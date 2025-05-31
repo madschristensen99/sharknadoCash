@@ -3,17 +3,16 @@ pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
 import {Counter} from "../src/Counter.sol";
+import { WebProofProver } from "../src/vlayer/WebProofProver.sol";
 
-contract CounterScript is Script {
-    Counter public counter;
-
+contract SimpleScript is Script {
     function setUp() public {}
 
     function run() public {
-        vm.startBroadcast();
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIV");
+        vm.startBroadcast(deployerPrivateKey);
 
-        counter = new Counter();
-
-        vm.stopBroadcast();
+        WebProofProver simpleProver = new WebProofProver();
+        console.log("SimpleProver contract deployed to:", address(simpleProver));
     }
 }
