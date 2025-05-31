@@ -89,6 +89,9 @@
 <script setup>
 import { ref } from "vue";
 
+const API_ENDPOINT =
+    "https://imaginative-truth-4.up.railway.app/api/zkproof/getProof";
+
 const secretKey = ref("");
 const txId = ref("");
 const evmRecipient = ref("");
@@ -116,8 +119,15 @@ const submitProof = async () => {
     }
 
     try {
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const params = new URLSearchParams({
+            txid: txId.value,
+            key: secretKey.value,
+            address: xmrRecipient.value,
+            ethereumRecipientAddress: evmRecipient.value,
+        });
+
+        const response = await fetch(`${API_ENDPOINT}?${params.toString()}`);
+        console.log(response);
     } finally {
         if (true) {
             proofState.value = 2;
