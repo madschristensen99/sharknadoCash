@@ -73,7 +73,8 @@
             class="w-full flex flex-col items-center gap-4 justify-center mt-4 p-2 rounded bg-green-500"
             v-if="proofState === 2"
         >
-            <span class="font-bold"> Proof generation was successfull! </span>
+            <span class="font-bold"> Proof generation failed! </span>
+            <p>{{ error }}</p>
         </div>
         <div
             class="w-full flex flex-col items-center gap-4 justify-center mt-4 p-2 rounded bg-red-600"
