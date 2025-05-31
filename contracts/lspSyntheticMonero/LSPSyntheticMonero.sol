@@ -10,11 +10,11 @@ import {DeployedContracts} from "./DeployedContracts.sol";
 
 /**
  * @title SyntheticMonero
- * @dev Implementation of a synthetic Monero (sXMR) token backed by collateral.
+ * @dev Implementation of a synthetic Monero (sXMR) token backed by NECT collateral.
  * 
- * This contract allows users to mint sXMR tokens by depositing collateral (e.g., USDC),
+ * This contract allows users to mint sXMR tokens by depositing NECT (a USD stablecoin) as collateral,
  * with the amount of sXMR minted based on the current XMR/USD price from the Pyth oracle.
- * Users can also burn sXMR tokens to redeem their collateral.
+ * Users can also burn sXMR tokens to redeem their NECT collateral.
  * 
  * The contract maintains a collateralization ratio (default 150%) to ensure the system
  * remains solvent even during price volatility.
@@ -32,7 +32,7 @@ contract SyntheticMonero is ERC20, Ownable {
     // Minimum collateralization ratio (150% = 15000)
     uint256 public collateralRatio = 15000; // 150% in basis points
     
-    // Collateral token (e.g., USDC)
+    // NECT token as collateral (USD stablecoin)
     address public collateralToken;
     
     // Mapping of user addresses to their collateral amounts
@@ -45,37 +45,28 @@ contract SyntheticMonero is ERC20, Ownable {
     uint256 public pythUpdateFee;
     
     // Events
-    event Minted(address indexed user, uint256 collateralAmount, uint256 sxmrAmount);
-    event Burned(address indexed user, uint256 sxmrAmount, uint256 collateralAmount);
+    event Minted(address indexed user, uint256 nectAmount, uint256 sxmrAmount);
+    event Burned(address indexed user, uint256 sxmrAmount, uint256 nectAmount);
     event CollateralAdded(address indexed user, uint256 amount);
     event CollateralRemoved(address indexed user, uint256 amount);
     event CollateralRatioUpdated(uint256 newRatio);
     
     /**
      * @dev Constructor to initialize the SyntheticMonero contract
-     * @param _pyth Address of the Pyth price feed contract (defaults to DeployedContracts.BERACHAIN_PYTH_ORACLE if not provided)
-     * @param _xmrUsdPriceId Pyth price feed ID for XMR/USD (defaults to DeployedContracts.XMR_USD_PYTH_PRICE_ID if not provided)
-     * @param _collateralToken Address of the collateral token (e.g., USDC)
-     * @param _owner Address of the contract owner who can adjust parameters
      * 
-     * The constructor sets up the initial state of the contract, including the Pyth oracle
-     * connection, the specific XMR/USD price feed to use, and the collateral token address.
+     * The constructor sets up the initial state of the contract using the deployed contract addresses
+     * from DeployedContracts library. It initializes the Pyth oracle connection, XMR/USD price feed,
+     * and NECT token address. The deployer automatically becomes the contract owner.
      * It also initializes the ERC20 token with the name "Synthetic Monero" and symbol "sXMR".
      */
-    constructor(
-        address _pyth,
-        bytes32 _xmrUsdPriceId,
-        address _collateralToken,
-        address _owner
-    ) ERC20("Synthetic Monero", "sXMR") Ownable(_owner) {
-        // Use provided addresses or default to the deployed contract addresses
-        pyth = IPyth(_pyth != address(0) ? _pyth : DeployedContracts.BERACHAIN_PYTH_ORACLE);
-        xmrUsdPriceId = _xmrUsdPriceId != bytes32(0) ? _xmrUsdPriceId : DeployedContracts.XMR_USD_PYTH_PRICE_ID;
-        collateralToken = _collateralToken;
+    constructor() ERC20("Synthetic Monero", "sXMR") Ownable(msg.sender) {
+        // Use the deployed contract addresses from DeployedContracts library
+        pyth = IPyth(DeployedContracts.BERACHAIN_PYTH_ORACLE);
+        xmrUsdPriceId = DeployedContracts.XMR_USD_PYTH_PRICE_ID;
+        collateralToken = DeployedContracts.NECT;
         
-        // Initialize with empty update data to get a base fee
-        bytes[] memory emptyUpdateData = new bytes[](0);
-        pythUpdateFee = pyth.getUpdateFee(emptyUpdateData);
+        // Note: Removed pyth.getUpdateFee() call from constructor to avoid deployment issues
+        // Fee will be calculated when needed in actual function calls
     }
     
     /**
@@ -99,26 +90,26 @@ contract SyntheticMonero is ERC20, Ownable {
     }
     
     /**
-     * @dev Mint sXMR tokens by depositing collateral
-     * @param collateralAmount Amount of collateral to deposit (in collateral token's smallest units)
+     * @dev Mint sXMR tokens by depositing NECT collateral
+     * @param nectAmount Amount of NECT to deposit (in NECT's smallest units, typically 18 decimals)
      * @param priceUpdateData The price update data from Pyth (can be empty if no update is needed)
      * 
-     * This function allows users to mint sXMR tokens by depositing collateral. The amount of sXMR
+     * This function allows users to mint sXMR tokens by depositing NECT collateral. The amount of sXMR
      * minted is calculated based on the current XMR/USD price from the Pyth oracle and the
      * collateralization ratio. If price update data is provided, the function will update the
      * price feed before minting.
      * 
-     * The formula used to calculate the amount of sXMR minted is:
-     * sxmrAmount = (collateralAmount * 10^8 * 10000) / (xmrUsdPrice * collateralRatio)
+     * Since NECT is a USD stablecoin (1 NECT ≈ 1 USD), the calculation is:
+     * sxmrAmount = (nectAmount * 10^8 * 10000) / (xmrUsdPrice * collateralRatio)
      * 
-     * This ensures that the value of the collateral is at least collateralRatio% of the value
-     * of the minted sXMR tokens.
+     * This ensures that the USD value of the NECT collateral is at least collateralRatio% 
+     * of the USD value of the minted sXMR tokens.
      * 
      * Requirements:
      * - The XMR/USD price must be greater than 0
-     * - The user must have approved the contract to spend their collateral tokens
+     * - The user must have approved the contract to spend their NECT tokens
      */
-    function mintWithCollateral(uint256 collateralAmount, bytes[] calldata priceUpdateData) external payable {
+    function mintWithCollateral(uint256 nectAmount, bytes[] calldata priceUpdateData) external payable {
         // Update price feed if data is provided
         if (priceUpdateData.length > 0) {
             uint256 fee = pyth.getUpdateFee(priceUpdateData);
@@ -129,38 +120,39 @@ contract SyntheticMonero is ERC20, Ownable {
         int64 xmrUsdPrice = getXmrUsdPrice();
         require(xmrUsdPrice > 0, "Invalid XMR price");
         
-        // Transfer collateral from user to contract
+        // Transfer NECT collateral from user to contract
         require(
-            IERC20(collateralToken).transferFrom(msg.sender, address(this), collateralAmount),
-            "Collateral transfer failed"
+            IERC20(collateralToken).transferFrom(msg.sender, address(this), nectAmount),
+            "NECT transfer failed"
         );
         
-        // Calculate how much sXMR can be minted based on collateral and price
-        // Adjust for decimal differences and collateralization ratio
-        uint256 sxmrAmount = (collateralAmount * 10**8 * 10000) / (uint256(uint64(xmrUsdPrice)) * collateralRatio);
+        // Calculate how much sXMR can be minted based on NECT collateral and XMR price
+        // Since NECT is a USD stablecoin, we use it directly as USD value
+        // Formula: sxmrAmount = (nectAmount * 10^8 * 10000) / (xmrUsdPrice * collateralRatio)
+        uint256 sxmrAmount = (nectAmount * 10**8 * 10000) / (uint256(uint64(xmrUsdPrice)) * collateralRatio);
         
         // Update user's collateral and minted amounts
-        userCollateral[msg.sender] += collateralAmount;
+        userCollateral[msg.sender] += nectAmount;
         userMinted[msg.sender] += sxmrAmount;
         
         // Mint sXMR tokens to the user
         _mint(msg.sender, sxmrAmount);
         
-        emit Minted(msg.sender, collateralAmount, sxmrAmount);
+        emit Minted(msg.sender, nectAmount, sxmrAmount);
     }
     
     /**
-     * @dev Burns sXMR tokens and redeems collateral
+     * @dev Burns sXMR tokens and redeems NECT collateral
      * @param sxmrAmount Amount of sXMR to burn (in sXMR's smallest units)
      * @param priceUpdateData The price update data from Pyth (can be empty if no update is needed)
      * 
      * This function allows users to burn their sXMR tokens and redeem the corresponding amount of
-     * collateral. The amount of collateral redeemed is calculated based on the current XMR/USD price
+     * NECT collateral. The amount of NECT redeemed is calculated based on the current XMR/USD price
      * from the Pyth oracle and the collateralization ratio. If price update data is provided, the
      * function will update the price feed before burning.
      * 
-     * The formula used to calculate the amount of collateral redeemed is:
-     * collateralAmount = (sxmrAmount * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10^8 * 10000)
+     * The formula used to calculate the amount of NECT redeemed is:
+     * nectAmount = (sxmrAmount * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10^8 * 10000)
      * 
      * Requirements:
      * - The user must have previously minted at least sxmrAmount of sXMR tokens
@@ -181,51 +173,51 @@ contract SyntheticMonero is ERC20, Ownable {
         int64 xmrUsdPrice = getXmrUsdPrice();
         require(xmrUsdPrice > 0, "Invalid XMR price");
         
-        // Calculate collateral amount to return based on sXMR amount and price
-        uint256 collateralToReturn = (sxmrAmount * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10**8 * 10000);
+        // Calculate NECT amount to return based on sXMR amount and current XMR price
+        uint256 nectToReturn = (sxmrAmount * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10**8 * 10000);
         
         // Ensure user has enough collateral
-        require(userCollateral[msg.sender] >= collateralToReturn, "Insufficient collateral");
+        require(userCollateral[msg.sender] >= nectToReturn, "Insufficient collateral");
         
         // Update user's collateral and minted amounts
-        userCollateral[msg.sender] -= collateralToReturn;
+        userCollateral[msg.sender] -= nectToReturn;
         userMinted[msg.sender] -= sxmrAmount;
         
         // Burn sXMR tokens from the user
         _burn(msg.sender, sxmrAmount);
         
-        // Return collateral to the user
+        // Return NECT collateral to the user
         require(
-            IERC20(collateralToken).transfer(msg.sender, collateralToReturn),
-            "Collateral transfer failed"
+            IERC20(collateralToken).transfer(msg.sender, nectToReturn),
+            "NECT transfer failed"
         );
         
-        emit Burned(msg.sender, sxmrAmount, collateralToReturn);
+        emit Burned(msg.sender, sxmrAmount, nectToReturn);
     }
     
     /**
-     * @dev Adds additional collateral without minting new tokens
-     * @param collateralAmount Amount of collateral to add
+     * @dev Adds additional NECT collateral without minting new tokens
+     * @param nectAmount Amount of NECT collateral to add
      */
-    function addCollateral(uint256 collateralAmount) external {
-        // Transfer collateral from user to contract
+    function addCollateral(uint256 nectAmount) external {
+        // Transfer NECT collateral from user to contract
         require(
-            IERC20(collateralToken).transferFrom(msg.sender, address(this), collateralAmount),
-            "Collateral transfer failed"
+            IERC20(collateralToken).transferFrom(msg.sender, address(this), nectAmount),
+            "NECT transfer failed"
         );
         
         // Update user's collateral amount
-        userCollateral[msg.sender] += collateralAmount;
+        userCollateral[msg.sender] += nectAmount;
         
-        emit CollateralAdded(msg.sender, collateralAmount);
+        emit CollateralAdded(msg.sender, nectAmount);
     }
     
     /**
-     * @dev Removes excess collateral without burning tokens
-     * @param collateralAmount Amount of collateral to remove
+     * @dev Removes excess NECT collateral without burning tokens
+     * @param nectAmount Amount of NECT collateral to remove
      * @param priceUpdateData The price update data from Pyth
      */
-    function removeExcessCollateral(uint256 collateralAmount, bytes[] calldata priceUpdateData) external payable {
+    function removeExcessCollateral(uint256 nectAmount, bytes[] calldata priceUpdateData) external payable {
         // Update price feed if data is provided
         if (priceUpdateData.length > 0) {
             uint256 fee = pyth.getUpdateFee(priceUpdateData);
@@ -236,22 +228,22 @@ contract SyntheticMonero is ERC20, Ownable {
         int64 xmrUsdPrice = getXmrUsdPrice();
         require(xmrUsdPrice > 0, "Invalid XMR price");
         
-        // Calculate minimum required collateral based on minted sXMR and current price
+        // Calculate minimum required NECT collateral based on minted sXMR and current price
         uint256 requiredCollateral = (userMinted[msg.sender] * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10**8 * 10000);
         
         // Ensure user has enough excess collateral to remove
-        require(userCollateral[msg.sender] >= requiredCollateral + collateralAmount, "Insufficient excess collateral");
+        require(userCollateral[msg.sender] >= requiredCollateral + nectAmount, "Insufficient excess collateral");
         
         // Update user's collateral amount
-        userCollateral[msg.sender] -= collateralAmount;
+        userCollateral[msg.sender] -= nectAmount;
         
-        // Return collateral to the user
+        // Return NECT collateral to the user
         require(
-            IERC20(collateralToken).transfer(msg.sender, collateralAmount),
-            "Collateral transfer failed"
+            IERC20(collateralToken).transfer(msg.sender, nectAmount),
+            "NECT transfer failed"
         );
         
-        emit CollateralRemoved(msg.sender, collateralAmount);
+        emit CollateralRemoved(msg.sender, nectAmount);
     }
     
     /**
@@ -276,19 +268,47 @@ contract SyntheticMonero is ERC20, Ownable {
         int64 xmrUsdPrice = getXmrUsdPrice();
         if (xmrUsdPrice <= 0) return false;
         
-        // Calculate required collateral based on minted sXMR and current price
+        // Calculate required NECT collateral based on minted sXMR and current price
         uint256 requiredCollateral = (userMinted[user] * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10**8 * 10000);
         
         return userCollateral[user] >= requiredCollateral;
     }
     
-    // TODO: sus function pyth price price data should not require a fee right? 
     /**
      * @dev Updates the Pyth update fee
+     * Note: Pyth price feeds do require fees for updates in most networks to compensate
+     * the oracle providers for gas costs and to prevent spam attacks.
      */
     function updatePythFee() external {
         // Initialize with empty update data to get a base fee
         bytes[] memory emptyUpdateData = new bytes[](0);
         pythUpdateFee = pyth.getUpdateFee(emptyUpdateData);
+    }
+    
+    /**
+     * @dev Get the current collateral token address (NECT)
+     * @return The address of the NECT token used as collateral
+     */
+    function getCollateralToken() external view returns (address) {
+        return collateralToken;
+    }
+    
+    /**
+     * @dev Get user's collateralization ratio in basis points
+     * @param user Address of the user to check
+     * @return ratio Current collateralization ratio for the user (0 if no position)
+     */
+    function getUserCollateralizationRatio(address user) external view returns (uint256 ratio) {
+        if (userMinted[user] == 0) return 0;
+        
+        // Get the current XMR/USD price
+        int64 xmrUsdPrice = getXmrUsdPrice();
+        if (xmrUsdPrice <= 0) return 0;
+        
+        // Calculate the USD value of minted sXMR
+        uint256 mintedValueUsd = (userMinted[user] * uint256(uint64(xmrUsdPrice))) / 10**8;
+        
+        // Calculate current ratio: (collateral * 10000) / mintedValueUsd
+        ratio = (userCollateral[user] * 10000) / mintedValueUsd;
     }
 }
