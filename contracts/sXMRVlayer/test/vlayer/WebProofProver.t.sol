@@ -6,7 +6,7 @@ import {WebProof, Web} from "vlayer-0.1.0/WebProof.sol";
 import {Proof} from "vlayer-0.1.0/Proof.sol";
 
 import { WebProofProver } from "../../src/vlayer/WebProofProver.sol";
-import { WebProofVerifier } from "../../src/vlayer/WebProofVerifier.sol";
+// import { WebProofVerifier } from "../../src/vlayer/WebProofVerifier.sol";
 
 contract WebProverTest is VTest {
     // using Strings for string;
@@ -38,7 +38,7 @@ contract WebProverTest is VTest {
         assertEq(concatRes, "https://newrepo-production-1571.up.railway.app/verify?txid=b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58&key=0d1c95e40aaebb47a98b8537e8c0318d71000b3e0fc6a7e0d01df93541796701&address=75jwJ7i21MWM5XnodztaPrevsCR5xPRNziG6WN5CVEEJPPbB4e53M8FKHoPGFBxg4vQg7LAuLgReK3yT9b2p3XHJ3CTMYXa");
 
         callProver();
-        (, address recipient, string memory amount) = prover.main(
+        (, address recipient, uint256 amount) = prover.main(
             webProof,
             secretKey,
             txId,

@@ -12,7 +12,7 @@ contract DeployVerifier is Script {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIV");
         vm.startBroadcast(deployerPrivateKey);
 
-        WebProofVerifier simpleProver = new WebProofVerifier(address(0xe5986C4fe91D4D50c5716DF805D877E31548c357));
+        WebProofVerifier simpleProver = new WebProofVerifier(address(0x38998FB1f83E0ff509d22A4369C90675b02F31ee), address(0x97028eA42bC77124c0e44EcEB7229c3EeDC3d257));
         console.log("SimpleProver contract deployed to:", address(simpleProver));
     }
 }
