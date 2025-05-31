@@ -10,7 +10,7 @@ import { sepolia } from "viem/chains";
 import { useWalletStore } from "../stores/walletStore";
 
 const USDC_CONTRACT = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-const SXMR_CONTRACT = "0x97028eA42bC77124c0e44EcEB7229c3EeDC3d257";
+const SXMR_CONTRACT = "0x76B1Dc0256913250D88209a86ecedb609D184732";
 
 export function useWallet() {
   const wallet = useWalletStore();

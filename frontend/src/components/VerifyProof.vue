@@ -104,7 +104,7 @@ const txId = ref();
 
 const USDC_CONTRACT = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 
-const verifierAddress = "0xA97b067B7740eb4DBfDA2E0865FAE580a88374a4";
+const verifierAddress = "0xeD0D97311b9D5B311Bdb3C97ff0b2B2980aFca64";
 const abi = verifierJson.abi;
 
 // 0 didn't start proving, 1 waiting for response,
