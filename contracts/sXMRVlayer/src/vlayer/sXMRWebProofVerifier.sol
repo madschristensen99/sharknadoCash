@@ -5,30 +5,36 @@ import {sXMRWebProver} from "./sXMRWebProver.sol";
 
 import {Proof} from "vlayer-0.1.0/Proof.sol";
 import {Verifier} from "vlayer-0.1.0/Verifier.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ERC20 } from "@openzeppelin-contracts-5.0.1/token/ERC20/ERC20.sol";
+
+// import {ERC721} from "@openzeppelin-contracts-5.0.1/token/ERC721/ERC721.sol";
 
 contract sXMRWebProofVerifier is Verifier {
-    using SafeERC20 for IERC20;
+    // using SafeERC20 for IERC20;
 
     address public prover;
 
     address public sXMRAddress;
 
-    mapping(uint256 => string) public tokenIdToMetadataUri;
+    mapping(string => bool) public withdrawTxIdRequestCompleted;
 
     constructor(address _prover){
         prover = _prover;
     }
 
-    event sXMRLiqudityDeposited(uint256 amount, address provider);
-
+    event sXMRLiqudityDeposited(uint256 amount, address depositor);
+    event sXMRWithdrawRequest(uint256 amount, string xmrAddress);
+    event sXMRWithdrawn(uint256 amount, address withdrawOperator);
+    event xmrDeposited(uint256 amount, address recipient);
 
     function depositLiquidity(
-        uint256 amount;
-    ) {
+        uint256 amount
+    )
+        public
+    {
         // validate
 
-        IERC20(sXMRAddress).safeTransferFrom(msg.sender, address(this), amount);
+        ERC20(sXMRAddress).transferFrom(msg.sender, address(this), amount);
 
         emit sXMRLiqudityDeposited(amount, msg.sender);
     }
@@ -43,6 +49,35 @@ contract sXMRWebProofVerifier is Verifier {
     {
         // is validation passed - release funds
 
-        IERC20(sXMRAddress).safeTransfer(address(this), evmRecipientAddress);
+        ERC20(sXMRAddress).transfer(evmRecipientAddress, amount);
+
+        emit xmrDeposited(amount, evmRecipientAddress);
+    }
+
+    function verifyWithdraw(
+        Proof calldata,
+        address withdrawOperator,
+        uint256 amount,
+        string calldata input
+    )
+        public
+        onlyVerified(prover, sXMRWebProver.main.selector)
+    {
+        // is validation passed - release funds
+
+        ERC20(sXMRAddress).transfer(withdrawOperator, amount);
+
+        emit sXMRWithdrawn(amount, withdrawOperator);
+    }
+
+    function withdraw(
+        string calldata xmrAddress,
+        uint256 amount
+    )
+        public
+    {
+        ERC20(sXMRAddress).transferFrom(msg.sender, address(this), amount);
+
+        emit sXMRWithdrawRequest(amount, xmrAddress);
     }
 }

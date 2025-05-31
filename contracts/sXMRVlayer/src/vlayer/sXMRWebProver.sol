@@ -10,7 +10,7 @@ contract sXMRWebProver is Prover {
     using WebLib for Web;
 
     string public constant DATA_URL =
-        "https://localmonero.co/blocks/tx/";
+        "http://86.38.205.119:3005/verify?txid=b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58&key=0d1c95e40aaebb47a98b8537e8c0318d71000b3e0fc6a7e0d01df93541796701&address=75jwJ7i21MWM5XnodztaPrevsCR5xPRNziG6WN5CVEEJPPbB4e53M8FKHoPGFBxg4vQg7LAuLgReK3yT9b2p3XHJ3CTMYXa&network=stagenet";
 
     function main(
         WebProof calldata webProof,
@@ -21,11 +21,11 @@ contract sXMRWebProver is Prover {
     )
         public
         view
-        returns (Proof memory, address recipient, uint256 amount)
+        returns (Proof memory, address, string memory)
     {
-        Web memory web = webProof.verify(string.concat(DATA_URL, txId, '?xmraddress', xmrRecipientAddress, '&txprvkey=', secretKey));
+        Web memory web = webProof.verify(string.concat(DATA_URL));
 
-        uint256 amount = web.jsonGetUint("amount");
+        string memory amount = web.jsonGetString("amount");
 
         return (proof(), evmRecipientAddress, amount);
     }

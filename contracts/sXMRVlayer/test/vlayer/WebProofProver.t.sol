@@ -23,7 +23,7 @@ contract WebProverTest is VTest {
         string memory xmrRecipientAddress = "82Yy6ygohJZdungHrXovdDjdpAu31iGPsXTTZRnPYadgJ9735P8eBweHK5djgovYQhEqssjRaNZ4hhi1e3MyaS28T1X471g";
 
         callProver();
-        (, address recipient, uint256 amount) = prover.main(
+        (, address recipient, string memory amount) = prover.main(
             webProof,
             secretKey,
             txId,
@@ -36,7 +36,7 @@ contract WebProverTest is VTest {
 
         // uint256 amount = 0; // Replace with actual amount from webProof
 
-        assertEq(amount, 0);
+        assertEq(amount, "0");
         // assertEq(recipient, evmRecipientAddress);
 
         // assertEq(secretKey , "60166f73264a77544b7aa287d45d82b91bba023358ffd00c227489dbc48d5809");
