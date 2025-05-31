@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { createContext, getConfig } from '@vlayer/sdk/config';
 import { createVlayerClient } from '@vlayer/sdk';
 import { spawn } from "child_process";
@@ -7,6 +8,8 @@ const proverAbi = [{"inputs":[],"name":"FailedInnerCall","type":"error"},{"input
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+app.use(cors());
 
 app.get('/api/zkproof/getProof', async (_req, res) => {
 
