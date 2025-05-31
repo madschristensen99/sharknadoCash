@@ -2,6 +2,9 @@
   "name": "ts-server",
   "version": "1.0.0",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
