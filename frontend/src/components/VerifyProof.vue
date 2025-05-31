@@ -25,6 +25,14 @@
                 class="w-full p-2 rounded bg-gray-800 border border-gray-700"
             />
         </div>
+        <div class="mb-4">
+            <label class="block mb-1">Tx Id</label>
+            <input
+                v-model.number="txId"
+                type="text"
+                class="w-full p-2 rounded bg-gray-800 border border-gray-700"
+            />
+        </div>
         <button
             type="submit"
             class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded"
@@ -86,8 +94,9 @@ import { sepolia } from "viem/chains";
 const proofBytes = ref("");
 const evmAddress = ref("");
 const amount = ref();
+const txId = ref();
 
-const verifierAddress = "0x1145CD754e9dfBe5C76B6357eD01900bBe9b543F";
+const verifierAddress = "0xA97b067B7740eb4DBfDA2E0865FAE580a88374a4";
 const abi = verifierJson.abi;
 
 // 0 didn't start proving, 1 waiting for response,
@@ -152,7 +161,7 @@ const verifyProof = async () => {
         seal: {
             verifierSelector: "0xdeafbeef",
             seal: [
-                "0xc2311f887275568935fff7b9d36283590080ac468c2d680d22d0d1aa0deeced9",
+                "0x3f282b7a759b878e530fc51786435e1f55e096341a507e3a55f9f810ef529879",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
                 "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -165,14 +174,14 @@ const verifyProof = async () => {
         },
         callGuestId:
             "0xdcb00648ecc90d8bfe92aa8d51061beb0bcb110d274fc4a517e526574233d36b",
-        length: 832,
+        length: 896,
         callAssumptions: {
-            proverContractAddress: "0xe5986c4fe91d4d50c5716df805d877e31548c357",
+            proverContractAddress: "0x38998fb1f83e0ff509d22a4369c90675b02f31ee",
             functionSelector: "0x1b0842f5",
             settleChainId: "0xaa36a7",
-            settleBlockNumber: "0x80e13e",
+            settleBlockNumber: "0x80e85c",
             settleBlockHash:
-                "0xd4e45f7f6ec744d4df4163d5cfc32243d2ec94eed1efae6ac31cfe4c77f325f2",
+                "0xcb82b7e2f5b7f40339786aa38419dea660f6fa2ab98874599a0cf37f50466b38",
         },
     };
 
@@ -183,7 +192,8 @@ const verifyProof = async () => {
         args: [
             proofArg,
             "0x2D0bf6D3BD0636eec331f7c2861F44D74a2dcaC3",
-            "0.001000000000",
+            "b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58",
+            1000000000,
         ],
         client: walletClient,
         account: wallet.account,

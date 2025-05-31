@@ -58,7 +58,6 @@ const fetchXMRRate = async () => {
                     return;
                 }
                 const responseFormatted = parseApiData(decoder.decode(value));
-                console.log(responseFormatted.parsed);
                 const price = responseFormatted.parsed[0].price.price;
                 const offset = responseFormatted.parsed[0].price.expo;
 
