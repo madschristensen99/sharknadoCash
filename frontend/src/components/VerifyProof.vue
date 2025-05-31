@@ -93,7 +93,7 @@ import { sepolia } from "viem/chains";
 
 const proofBytes = ref("");
 const evmAddress = ref("");
-const amount = ref();
+const amount = ref(1000000000);
 const txId = ref();
 
 const verifierAddress = "0xA97b067B7740eb4DBfDA2E0865FAE580a88374a4";
@@ -157,44 +157,16 @@ const verifyProof = async () => {
         transport: http(),
     });
 
-    const proofArg = {
-        seal: {
-            verifierSelector: "0xdeafbeef",
-            seal: [
-                "0x3f282b7a759b878e530fc51786435e1f55e096341a507e3a55f9f810ef529879",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
-            ],
-            mode: 1,
-        },
-        callGuestId:
-            "0xdcb00648ecc90d8bfe92aa8d51061beb0bcb110d274fc4a517e526574233d36b",
-        length: 896,
-        callAssumptions: {
-            proverContractAddress: "0x38998fb1f83e0ff509d22a4369c90675b02f31ee",
-            functionSelector: "0x1b0842f5",
-            settleChainId: "0xaa36a7",
-            settleBlockNumber: "0x80e85c",
-            settleBlockHash:
-                "0xcb82b7e2f5b7f40339786aa38419dea660f6fa2ab98874599a0cf37f50466b38",
-        },
-    };
+    const proofArg = JSON.parse(proofBytes.value)?.proof;
+
+    console.log(proofBytes.value, evmAddress.value, txId.value, amount.value);
+    console.log(proofArg);
 
     const result = await walletClient.writeContract({
         address: verifierAddress,
         abi: abi,
         functionName: "verifyDeposit",
-        args: [
-            proofArg,
-            "0x2D0bf6D3BD0636eec331f7c2861F44D74a2dcaC3",
-            "b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58",
-            1000000000,
-        ],
+        args: [proofArg, evmAddress.value, txId.value, amount.value],
         client: walletClient,
         account: wallet.account,
     });
