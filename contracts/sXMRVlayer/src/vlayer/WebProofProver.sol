@@ -21,7 +21,7 @@ contract WebProofProver is Prover {
     )
         public
         view
-        returns (Proof memory, address, string memory)
+        returns (Proof memory, address, string memory, uint256)
     {
         string[] memory params = new string[](7);
         params[0] = DATA_URL;
@@ -36,9 +36,11 @@ contract WebProofProver is Prover {
 
         Web memory web = webProof.verify(concatenated);
 
-        string memory amount = web.jsonGetString("amount");
+        int256 amount = web.jsonGetInt("amount");
 
-        return (proof(), evmRecipientAddress, amount);
+        require(amount > 0, "Amount must be greater than zero");
+
+        return (proof(), evmRecipientAddress, txId, uint256(amount));
     }
 
     function concatStrings(string[] memory parts) public pure returns (string memory) {

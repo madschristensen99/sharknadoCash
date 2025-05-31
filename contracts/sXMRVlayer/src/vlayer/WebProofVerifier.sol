@@ -7,35 +7,29 @@ import {Proof} from "vlayer-0.1.0/Proof.sol";
 import {Verifier} from "vlayer-0.1.0/Verifier.sol";
 import { ERC20 } from "@openzeppelin-contracts-5.0.1/token/ERC20/ERC20.sol";
 
-// import {ERC721} from "@openzeppelin-contracts-5.0.1/token/ERC721/ERC721.sol";
-
 contract WebProofVerifier is Verifier {
-    // using SafeERC20 for IERC20;
-
     address public prover;
 
     address public sXMRAddress;
 
-    mapping(string => bool) public withdrawTxIdRequestCompleted;
     mapping(address => uint256) public depositedLiqudity;
+    mapping(address => uint256) public withdrawRequests;
+    mapping(bytes32 => bool) private proceededtxIds;
 
-    constructor(address _prover){
+    constructor(address _prover, address _sXMRAddress) {
         prover = _prover;
+        sXMRAddress = _sXMRAddress;
     }
 
     event sXMRLiqudityDeposited(uint256 amount, address depositor);
-    event sXMRWithdrawRequest(uint256 amount, string xmrAddress);
-    event sXMRWLiquidityWithdraw(uint256 amount, address depositor);
-    event sXMRWithdrawn(uint256 amount, address withdrawOperator);
     event xmrDeposited(uint256 amount, address recipient);
+    event withdrawnLiquidity(uint256 amount, address requester);
 
     function depositLiquidity(
         uint256 amount
     )
         public
     {
-        // validate
-
         ERC20(sXMRAddress).transferFrom(msg.sender, address(this), amount);
 
         depositedLiqudity[msg.sender] += amount;
@@ -48,57 +42,38 @@ contract WebProofVerifier is Verifier {
     )
         public
     {
-        require(depositedLiqudity[msg.sender] >= amount, "Insufficient liquidity");
+        require(
+            depositedLiqudity[msg.sender] >= amount,
+            "Insufficient liquidity"
+        );
 
         depositedLiqudity[msg.sender] -= amount;
 
         ERC20(sXMRAddress).transfer(msg.sender, amount);
 
-        emit sXMRWLiquidityWithdraw(amount, msg.sender); // xmrAddress is not used here
+        emit withdrawnLiquidity(amount, msg.sender);
     }
 
-    // called by the depositor from XMR to ETH
     function verifyDeposit(
         Proof calldata,
         address evmRecipientAddress,
-        string calldata amount
-    )
-        public
-        onlyVerified(prover, WebProofProver.main.selector)
-    {
-        // is validation passed - release funds
-
-        // ERC20(sXMRAddress).transfer(evmRecipientAddress, amount);
-
-        emit xmrDeposited(0, evmRecipientAddress);
-    }
-
-    // called by the withdraw operator from ETH to XMR
-    function verifyWithdraw(
-        Proof calldata,
-        address withdrawOperator,
-        uint256 amount,
-        string calldata input
-    )
-        public
-        onlyVerified(prover, WebProofProver.main.selector)
-    {
-        // is validation passed - release funds
-
-        ERC20(sXMRAddress).transfer(withdrawOperator, amount);
-
-        emit sXMRWithdrawn(amount, withdrawOperator);
-    }
-
-    // called by the user to request withdraw
-    function withdraw(
-        string calldata xmrAddress,
+        string calldata txId,
         uint256 amount
     )
         public
+        onlyVerified(prover, WebProofProver.main.selector)
     {
-        ERC20(sXMRAddress).transferFrom(msg.sender, address(this), amount);
+        bytes32 keyHash = keccak256(abi.encodePacked(txId));
 
-        emit sXMRWithdrawRequest(amount, xmrAddress);
+        require(
+            proceededtxIds[keyHash] == false,
+            "Key already used"
+        );
+
+        proceededtxIds[keyHash] = true;
+
+        ERC20(sXMRAddress).transfer(evmRecipientAddress, amount);
+
+        emit xmrDeposited(amount, evmRecipientAddress);
     }
 }

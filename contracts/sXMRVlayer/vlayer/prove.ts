@@ -252,7 +252,7 @@ console.log("⏳ Deploying contracts...");
 // });
 
 await writeEnvVariables(".env", {
-  VITE_PROVER_ADDRESS: '0xe5986c4fe91d4d50c5716df805d877e31548c357',
+  VITE_PROVER_ADDRESS: '0x38998FB1f83E0ff509d22A4369C90675b02F31ee',
   VITE_VERIFIER_ADDRESS: "0xf60364b3fa5d3eaada7989dcd080d369617d59db",
 });
 
@@ -264,9 +264,11 @@ console.log("✅ Web proof generated");
 
 console.log("Web proof:", webProof);
 
+const prover = '0x38998FB1f83E0ff509d22A4369C90675b02F31ee';
+
 console.log("⏳ Proving...");
 const hash = await vlayer.prove({
-  address: '0xe5986c4fe91d4d50c5716df805d877e31548c357',
+  address: prover,
   functionName: "main",
   proverAbi: proverSpec.abi,
   args: [
@@ -287,17 +289,22 @@ console.log("Proving hash:", hash);
 const result = await vlayer.waitForProvingResult({ hash });
 
 console.log(result);
-const [proof, avgPrice] = result;
+const [proof, ...resr] = result;
 console.log("✅ Proof generated");
+
+console.log("Proof:", proof);
+
+console.log(resr);
 
 console.log("⏳ Verifying...");
 
-const verifier = "0xf60364b3fa5d3eaada7989dcd080d369617d59db"; // Replace with your verifier address
+const verifier = "0xA97b067B7740eb4DBfDA2E0865FAE580a88374a4"; // Replace with your verifier address
 
 const verifyargs = [
   proof,
   "0x2D0bf6D3BD0636eec331f7c2861F44D74a2dcaC3",
-  "0.001000000000",
+  "b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58",
+  1000000000,
 ];
 
 const gas = await ethClient.estimateContractGas({
