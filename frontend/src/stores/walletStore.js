@@ -10,6 +10,7 @@ export const useWalletStore = defineStore("wallet", () => {
   const account = ref(null);
   const networkName = ref(null);
   const usdcBalance = ref("0");
+  const sXMRBalance = ref("0");
 
   const walletClient = ref(null);
   const publicClient = ref(null);
@@ -17,6 +18,7 @@ export const useWalletStore = defineStore("wallet", () => {
   const setAccount = (addr) => (account.value = addr);
   const setNetwork = (id) => (networkName.value = chains[id]);
   const setUsdcBalance = (balance) => (usdcBalance.value = balance);
+  const setSxmrBalance = (balance) => (sXMRBalance.value = balance);
   const setWalletClient = (client) => (walletClient.value = client);
   const setPublicClient = (client) => (publicClient.value = client);
 
@@ -24,9 +26,11 @@ export const useWalletStore = defineStore("wallet", () => {
     account,
     networkName,
     usdcBalance,
+    sXMRBalance,
     setAccount,
     setNetwork,
     setUsdcBalance,
+    setSxmrBalance,
     setWalletClient,
     setPublicClient,
   };

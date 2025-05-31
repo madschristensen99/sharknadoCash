@@ -10,6 +10,7 @@ import { sepolia } from "viem/chains";
 import { useWalletStore } from "../stores/walletStore";
 
 const USDC_CONTRACT = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+const SXMR_CONTRACT = "0x97028eA42bC77124c0e44EcEB7229c3EeDC3d257";
 
 export function useWallet() {
   const wallet = useWalletStore();
@@ -69,8 +70,17 @@ export function useWallet() {
         args: [account],
       });
 
+      const sxmr = await publicClient.readContract({
+        address: SXMR_CONTRACT,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [account],
+      });
+
       const usdcBalance = formatUnits(balance, 6); // USDC has 6 decimals
+      const sXMRBalance = formatUnits(sxmr, 12); // sXMR has 12 decimals
       wallet.setUsdcBalance(usdcBalance);
+      wallet.setSxmrBalance(sXMRBalance);
     }
   };
 
