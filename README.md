@@ -1,6 +1,6 @@
 # 🌪️ SharknadoCash - Synthetic Monero (sXMR) Token System 🔒
 
-![SharknadoCash Logo](assets/sharknadoUI.jpg)
+![SharknadoCash Logo](assets/sharknado.jpg)
 
 ## 🔐 What is Monero and Why it Matters
 
@@ -21,7 +21,7 @@ SharknadoCash bridges this gap by bringing Monero's privacy guarantees to EVM ch
 
 SharknadoCash is a system for creating and managing synthetic Monero (sXMR) tokens on EVM-compatible blockchains. The system allows users to mint sXMR tokens backed by collateral, with the price of Monero determined by a Pyth price oracle. Additionally, our bridging system enables 1:1 sXMR to XMR transfers using vLayer's Web Proofs for verification of Monero blockchain transactions.
 
-![SharknadoCash UI](assets/sharknado.png)
+![SharknadoCash UI](assets/sharknadoUI.png)
 
 **[Try our live demo](https://fungerbil.com/sharknado/index.html)** to experience the mint/burn interface for sXMR tokens.
 
