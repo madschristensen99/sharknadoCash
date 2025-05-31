@@ -19,6 +19,59 @@ SharknadoCash bridges this gap by bringing Monero's privacy guarantees to EVM ch
 
 SharknadoCash is a system for creating and managing synthetic Monero (sXMR) tokens on EVM-compatible blockchains. The system allows users to mint sXMR tokens backed by collateral, with the price of Monero determined by a Pyth price oracle. Additionally, our bridging system enables 1:1 sXMR to XMR transfers using vLayer's Web Proofs for verification of Monero blockchain transactions.
 
+## 📁 Repository Structure
+
+The repository is organized into the following main directories:
+
+### 📂 `/assets`
+Contains project images and visual assets including:
+- `sharknado.png` - Main project logo
+- `sharknadoUI.png` - UI design mockup
+
+### 📂 `/backend`
+Server implementation for the bridge between sXMR and Monero:
+- Node.js/Express server that handles bridge operations
+- Connects to Monero nodes for transaction verification
+- Manages API endpoints for the frontend to interact with
+
+### 📂 `/frontend`
+Frontend implementation for the bridge interface:
+- Vue.js-based web application
+- User interface for minting sXMR, managing collateral, and performing swaps
+- Connects to the backend API and smart contracts
+
+### 📂 `/contracts`
+Smart contract implementations organized into several key modules:
+
+#### 📂 `/contracts/interfaces`
+Contract interfaces and abstract contracts:
+- Defines common interfaces for system components
+- Ensures consistent implementation across contracts
+
+#### 📂 `/contracts/lspSyntheticMonero`
+Liquid Stability Pool integration for sXMR:
+- `LSPAdapter.sol` - Connects to Bera Borrow's LSP and manages liquidity flow
+- `LSPSyntheticMonero.sol` - Enhanced sXMR token with LSP integration
+- `sXMRLiquidator.sol` - Efficient liquidation process using LSP liquidity
+- `CrossChainSXMR.sol` - Cross-chain functionality for sXMR
+
+#### 📂 `/contracts/sXMRVlayer`
+vLayer integration for Monero transaction verification:
+- Implements vLayer Web Proofs (zkTLS) for trustless verification
+- Contains the MoneroNodeVerifier contract
+- Includes test scripts and fixtures
+
+### 📂 `/layerZeroBasicContracts`
+Implementation of LayerZero protocol integration:
+- Enables cross-chain messaging and token transfers
+- Supports bridging sXMR across multiple EVM chains
+
+### 📂 `/monero_tx_Server`
+Monero transaction verification server:
+- Connects to Monero stagenet node
+- Verifies transaction details using the Monero wallet
+- Provides verification endpoints for the bridge
+
 ## 🧩 Key Components
 
 ### 💎 SyntheticMonero (sXMR) Token
@@ -42,6 +95,41 @@ A contract that enables 1:1 swaps between sXMR and real XMR. The process works a
 
 A contract that verifies Monero transactions using vLayer's Web Proofs (zkTLS). This enables trustless verification of off-chain Monero payments within the EVM environment and executes the payment to the proof provider.
 
+### 🏦 LSP Integration (Liquid Stability Pool)
+
+The LSP integration provides several key benefits for the sXMR system:
+
+- **Enhanced Liquidity**: Provides deep liquidity for efficient liquidations
+- **Capital Efficiency**: Reduces collateralization requirements
+- **Stability Mechanism**: Acts as a backstop during market volatility
+- **Fee Generation**: Creates additional yield for LSP depositors
+- **Privacy Preservation**: Maintains Monero's privacy guarantees on EVM chains
+- **Instant Finality**: Enables immediate settlement of Monero transactions
+
+## 🌐 Similar Protocols & Comparisons
+
+SharknadoCash builds on concepts from several existing protocols while introducing unique innovations:
+
+### 1. **Synthetix**
+- Similar: Collateral-backed synthetic assets
+- Different: SharknadoCash focuses specifically on Monero and privacy features
+
+### 2. **Tornado Cash**
+- Similar: Privacy-focused transactions on EVM chains
+- Different: SharknadoCash leverages Monero's battle-tested privacy infrastructure rather than on-chain mixers
+
+### 3. **RenVM**
+- Similar: Cross-chain asset bridging
+- Different: SharknadoCash uses vLayer Web Proofs instead of threshold signatures
+
+### 4. **Bera Borrow**
+- Similar: Stability mechanisms and liquidation processes
+- Different: SharknadoCash integrates with Bera Borrow's LSP rather than competing with it
+
+### 5. **Interlay/Kintsugi**
+- Similar: Trustless verification of external blockchain transactions
+- Different: Focuses on Monero rather than Bitcoin
+
 ## 🛠️ Technologies Used
 
 - **Foundry**: Development framework
@@ -49,6 +137,8 @@ A contract that verifies Monero transactions using vLayer's Web Proofs (zkTLS). 
 - **vLayer Web Proofs**: For creating cryptographic proofs of Monero transactions
 - **Pyth Network**: For price oracle data
 - **OpenZeppelin**: For secure contract implementations
+- **LayerZero**: For cross-chain messaging and token transfers
+- **Bera Borrow LSP**: For enhanced liquidity and stability
 
 ## 🏁 Getting Started
 
