@@ -196,7 +196,7 @@
 
 import { createVlayerClient } from "@vlayer/sdk";
 import proverSpec from "../out/WebProofProver.sol/WebProofProver";
-// import verifierSpec from "../out/WebProofVerifier.sol/WebProofVerifier";
+import verifierSpec from "../out/WebProofVerifier.sol/WebProofVerifier";
 import web_proof from "../testdata/web_proof.json";
 import web_proof_invalid_signature from "../testdata/web_proof_invalid_notary_pub_key.json";
 import * as assert from "assert";
@@ -253,7 +253,7 @@ console.log("⏳ Deploying contracts...");
 
 await writeEnvVariables(".env", {
   VITE_PROVER_ADDRESS: '0xe5986c4fe91d4d50c5716df805d877e31548c357',
-  // VITE_VERIFIER_ADDRESS: verifier,
+  VITE_VERIFIER_ADDRESS: "0xf60364b3fa5d3eaada7989dcd080d369617d59db",
 });
 
 // console.log("✅ Contracts deployed", { prover, verifier });
@@ -287,10 +287,44 @@ console.log("Proving hash:", hash);
 const result = await vlayer.waitForProvingResult({ hash });
 
 console.log(result);
-// const [proof, avgPrice] = result;
-// console.log("✅ Proof generated");
+const [proof, avgPrice] = result;
+console.log("✅ Proof generated");
 
-// console.log("⏳ Verifying...");
+console.log("⏳ Verifying...");
+
+const verifier = "0xf60364b3fa5d3eaada7989dcd080d369617d59db"; // Replace with your verifier address
+
+const verifyargs = [
+  proof,
+  "0x2D0bf6D3BD0636eec331f7c2861F44D74a2dcaC3",
+  "0.001000000000",
+];
+
+const gas = await ethClient.estimateContractGas({
+  address: verifier,
+  abi: verifierSpec.abi,
+  functionName: "verifyDeposit",
+  args: verifyargs,
+  account,
+  blockTag: "pending",
+});
+
+const txHash = await ethClient.writeContract({
+  address: verifier,
+  abi: verifierSpec.abi,
+  functionName: "verifyDeposit",
+  args: verifyargs,
+  chain,
+  account,
+  gas,
+});
+
+await ethClient.waitForTransactionReceipt({
+  hash: txHash,
+  confirmations,
+  retryCount: 60,
+  retryDelay: 1000,
+});
 
 function runProcess(
   cmd: string,
