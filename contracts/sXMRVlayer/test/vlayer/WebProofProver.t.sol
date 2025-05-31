@@ -6,6 +6,7 @@ import {WebProof, Web} from "vlayer-0.1.0/WebProof.sol";
 import {Proof} from "vlayer-0.1.0/Proof.sol";
 
 import { WebProofProver } from "../../src/vlayer/WebProofProver.sol";
+import { WebProofVerifier } from "../../src/vlayer/WebProofVerifier.sol";
 
 contract WebProverTest is VTest {
     // using Strings for string;
@@ -17,7 +18,7 @@ contract WebProverTest is VTest {
         WebProofProver prover = new WebProofProver();
         address account = vm.addr(1);
 
-        string memory DATA_URL = "https://86.38.205.119:3005/verify"; 
+        string memory DATA_URL = "https://newrepo-production-1571.up.railway.app/verify"; 
         string memory secretKey = "0d1c95e40aaebb47a98b8537e8c0318d71000b3e0fc6a7e0d01df93541796701";
         string memory txId = "b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58";
         address evmRecipientAddress = vm.addr(1);
@@ -34,7 +35,7 @@ contract WebProverTest is VTest {
 
         string memory concatRes = prover.concatStrings(params);
 
-        assertEq(concatRes, "https://86.38.205.119:3005/verify?txid=b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58&key=0d1c95e40aaebb47a98b8537e8c0318d71000b3e0fc6a7e0d01df93541796701&address=75jwJ7i21MWM5XnodztaPrevsCR5xPRNziG6WN5CVEEJPPbB4e53M8FKHoPGFBxg4vQg7LAuLgReK3yT9b2p3XHJ3CTMYXa");
+        assertEq(concatRes, "https://newrepo-production-1571.up.railway.app/verify?txid=b96790e316edc38f5e280641229afdff19962d11037c6e3f62aea69596fc2d58&key=0d1c95e40aaebb47a98b8537e8c0318d71000b3e0fc6a7e0d01df93541796701&address=75jwJ7i21MWM5XnodztaPrevsCR5xPRNziG6WN5CVEEJPPbB4e53M8FKHoPGFBxg4vQg7LAuLgReK3yT9b2p3XHJ3CTMYXa");
 
         callProver();
         (, address recipient, string memory amount) = prover.main(
@@ -54,6 +55,22 @@ contract WebProverTest is VTest {
 
         // assertEq(secretKey , "60166f73264a77544b7aa287d45d82b91bba023358ffd00c227489dbc48d5809");
     }
+
+    // function to test verifier verifyDeposit function
+    // function test_verifiesWebProof() public {
+    //     WebProofVerifier verifier = new WebProofVerifier(address(this));
+    //     string memory proof
+
+    //     callProver();
+    //     Proof memory proof;
+    //     string memory message;
+    //     address recipient;
+
+    //     (proof, message, recipient) = verifier.main(webProof, account);
+
+    //     assertEq(recipient, account);
+    //     assertEq(message, "Web proof verified successfully");
+    // }
 
     // function test_failedVerificationBecauseOfInvlidNotaryPublicKey() public {
     //     WebProof memory webProof = WebProof(
