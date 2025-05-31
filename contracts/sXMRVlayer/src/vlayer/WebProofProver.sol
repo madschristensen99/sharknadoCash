@@ -10,7 +10,7 @@ contract WebProofProver is Prover {
     using WebLib for Web;
 
     string public constant DATA_URL =
-        "https://api.fungerbil.com/verify?";
+        "https://newrepo-production-1571.up.railway.app/verify";
 
     function main(
         WebProof calldata webProof,

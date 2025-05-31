@@ -68,9 +68,9 @@ contract WebProofVerifier is Verifier {
     {
         // is validation passed - release funds
 
-        ERC20(sXMRAddress).transfer(evmRecipientAddress, amount);
+        // ERC20(sXMRAddress).transfer(evmRecipientAddress, amount);
 
-        emit xmrDeposited(amount, evmRecipientAddress);
+        emit xmrDeposited(0, evmRecipientAddress);
     }
 
     // called by the withdraw operator from ETH to XMR

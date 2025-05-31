@@ -5,7 +5,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 // Enable JSON parsing and CORS
 app.use(express.json());
@@ -13,6 +13,9 @@ app.use(cors());
 
 // Simple home page
 app.get('/', (req, res) => {
+
+  console.log(req.query);
+
   res.send(`
     <h1>Monero Transaction Verifier</h1>
     <p>Use the API endpoint: <code>/verify?txid=YOUR_TX_ID&key=YOUR_TX_KEY&address=DESTINATION_ADDRESS</code></p>
