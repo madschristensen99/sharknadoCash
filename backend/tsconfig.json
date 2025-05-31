@@ -1,19 +1,18 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
+    "outDir": "./dist",       // Where the JS will go
+    "rootDir": "./src",   
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "rootDir": "src",
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
+    // "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
-    "noEmit": true,
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
@@ -22,5 +21,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
   },
-  "include": ["src"]
+  "include": ["src"],
+  
 }
