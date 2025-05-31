@@ -11,6 +11,7 @@ import {
 import { sepolia } from "viem/chains";
 import { ref, onMounted } from "vue";
 import WalletInfo from "./components/WalletInfo.vue";
+import CreateProofForm from "./components/CreateProofForm.vue";
 
 const address = ref(null);
 const usdcBalance = ref(null);
@@ -135,8 +136,9 @@ onMounted(async () => {
         >
             Sharknado
         </header>
-        <main class="flex">
+        <main class="flex flex-col">
             <WalletInfo />
+            <CreateProofForm />
         </main>
     </div>
 </template>
