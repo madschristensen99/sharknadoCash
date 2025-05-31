@@ -29,6 +29,7 @@
             type="submit"
             class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded"
             :disabled="verifyState != 0"
+            @click="verifyProof"
         >
             <span
                 v-if="verifyState === 1"
@@ -76,10 +77,18 @@
 
 <script setup>
 import { ref } from "vue";
+import verifierJson from "@/abi/Verifier.json";
+import { useWalletStore } from "../stores/walletStore";
+import { storeToRefs } from "pinia";
+import { createWalletClient, createPublicClient, http, custom } from "viem";
+import { sepolia } from "viem/chains";
 
 const proofBytes = ref("");
 const evmAddress = ref("");
 const amount = ref();
+
+const verifierAddress = "0xf60364B3FA5D3EaAda7989dCd080D369617D59db";
+const abi = verifierJson.abi;
 
 // 0 didn't start proving, 1 waiting for response,
 // 2 success, 3 fail
@@ -122,5 +131,64 @@ const submitProof = async () => {
     };
 
     console.log(proof);
+};
+
+const verifyProof = async () => {
+    const wallet = useWalletStore();
+
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+
+    const walletClient = createWalletClient({
+        chain: sepolia,
+        transport: custom(window.ethereum),
+    });
+
+    const publicClient = createPublicClient({
+        chain: sepolia,
+        transport: http(),
+    });
+
+    const proofArg = {
+        seal: {
+            verifierSelector: "0xdeafbeef",
+            seal: [
+                "0xc2311f887275568935fff7b9d36283590080ac468c2d680d22d0d1aa0deeced9",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
+            ],
+            mode: 1,
+        },
+        callGuestId:
+            "0xdcb00648ecc90d8bfe92aa8d51061beb0bcb110d274fc4a517e526574233d36b",
+        length: 832,
+        callAssumptions: {
+            proverContractAddress: "0xe5986c4fe91d4d50c5716df805d877e31548c357",
+            functionSelector: "0x1b0842f5",
+            settleChainId: "0xaa36a7",
+            settleBlockNumber: "0x80e13e",
+            settleBlockHash:
+                "0xd4e45f7f6ec744d4df4163d5cfc32243d2ec94eed1efae6ac31cfe4c77f325f2",
+        },
+    };
+
+    const result = await walletClient.writeContract({
+        address: verifierAddress,
+        abi: abi,
+        functionName: "verifyDeposit",
+        args: [
+            proofArg,
+            "0x2D0bf6D3BD0636eec331f7c2861F44D74a2dcaC3",
+            "0.001000000000",
+        ],
+        client: walletClient,
+        account: wallet.account,
+    });
+
+    console.log(result);
 };
 </script>
