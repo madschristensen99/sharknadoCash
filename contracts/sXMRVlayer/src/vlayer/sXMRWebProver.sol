@@ -5,7 +5,7 @@ import {Proof} from "vlayer-0.1.0/Proof.sol";
 import {Prover} from "vlayer-0.1.0/Prover.sol";
 import {Web, WebProof, WebProofLib, WebLib} from "vlayer-0.1.0/WebProof.sol";
 
-contract WebProofProver is Prover {
+contract sXMRWebProver is Prover {
     using WebProofLib for WebProof;
     using WebLib for Web;
 
@@ -21,11 +21,11 @@ contract WebProofProver is Prover {
     )
         public
         view
-        returns (Proof memory, string memory, address)
+        returns (Proof memory, address recipient, uint256 amount)
     {
-        // Web memory web = webProof.verify(string.concat(DATA_URL, txId, '?xmraddress', xmrRecipientAddress, '&txprvkey=', secretKey));
+        Web memory web = webProof.verify(string.concat(DATA_URL, txId, '?xmraddress', xmrRecipientAddress, '&txprvkey=', secretKey));
 
-        uint256 amount; // = web.jsonGetUint("amount");
+        uint256 amount = web.jsonGetUint("amount");
 
         return (proof(), evmRecipientAddress, amount);
     }
