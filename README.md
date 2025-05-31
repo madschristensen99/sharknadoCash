@@ -1,6 +1,6 @@
 # 🌪️ SharknadoCash - Synthetic Monero (sXMR) Token System 🔒
 
-![SharknadoCash Logo](assets/sharknado.png)
+![SharknadoCash Logo](assets/sharknado.jpg)
 
 ## 🔐 What is Monero and Why it Matters
 
