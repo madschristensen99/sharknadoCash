@@ -1,190 +1,294 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../syntheticMonero.sol";
-import "./LSPAdapter.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPyth} from "../interfaces/IPyth.sol";
+import {PythStructs} from "../interfaces/PythStructs.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {DeployedContracts} from "./DeployedContracts.sol";
 
 /**
- * @title LSPSyntheticMonero
- * @dev Enhanced version of SyntheticMonero with LSP integration for liquidations
- * This contract extends the original SyntheticMonero with additional liquidation functionality
+ * @title SyntheticMonero
+ * @dev Implementation of a synthetic Monero (sXMR) token backed by collateral.
+ * 
+ * This contract allows users to mint sXMR tokens by depositing collateral (e.g., USDC),
+ * with the amount of sXMR minted based on the current XMR/USD price from the Pyth oracle.
+ * Users can also burn sXMR tokens to redeem their collateral.
+ * 
+ * The contract maintains a collateralization ratio (default 150%) to ensure the system
+ * remains solvent even during price volatility.
+ * 
+ * Price data is obtained from the Pyth Network oracle, which provides reliable and
+ * up-to-date XMR/USD price feeds.
  */
-contract LSPSyntheticMonero is SyntheticMonero {
-    // LSP Adapter contract
-    LSPAdapter public lspAdapter;
+contract SyntheticMonero is ERC20, Ownable {
+    // Pyth price feed contract
+    IPyth public pyth;
     
-    // Liquidation threshold (in basis points, e.g., 12000 = 120%)
-    uint256 public liquidationThreshold = 12000;
+    // Pyth price feed ID for XMR/USD
+    bytes32 public xmrUsdPriceId;
     
-    // Liquidation bonus (in basis points, e.g., 500 = 5%)
-    uint256 public liquidationBonus = 500;
+    // Minimum collateralization ratio (150% = 15000)
+    uint256 public collateralRatio = 15000; // 150% in basis points
     
-    // Liquidation enabled flag
-    bool public liquidationsEnabled = true;
+    // Collateral token (e.g., USDC)
+    address public collateralToken;
     
-    // Mapping to track if a user's position has been liquidated
-    mapping(address => bool) public liquidated;
+    // Mapping of user addresses to their collateral amounts
+    mapping(address => uint256) public userCollateral;
+    
+    // Mapping of user addresses to their minted sXMR amounts
+    mapping(address => uint256) public userMinted;
+    
+    // Price update fee for Pyth
+    uint256 public pythUpdateFee;
     
     // Events
-    event LiquidationExecuted(address indexed user, uint256 debt, uint256 collateral, address liquidator);
-    event LiquidationThresholdUpdated(uint256 newThreshold);
-    event LiquidationBonusUpdated(uint256 newBonus);
-    event LiquidationsToggled(bool enabled);
-    event LSPAdapterUpdated(address newAdapter);
+    event Minted(address indexed user, uint256 collateralAmount, uint256 sxmrAmount);
+    event Burned(address indexed user, uint256 sxmrAmount, uint256 collateralAmount);
+    event CollateralAdded(address indexed user, uint256 amount);
+    event CollateralRemoved(address indexed user, uint256 amount);
+    event CollateralRatioUpdated(uint256 newRatio);
     
     /**
-     * @dev Constructor
-     * @param _collateralToken Address of the collateral token
-     * @param _pythAddress Address of the Pyth price feed contract
-     * @param _priceId Pyth price feed ID for XMR/USD
-     * @param _lspAdapter Address of the LSP Adapter contract
+     * @dev Constructor to initialize the SyntheticMonero contract
+     * @param _pyth Address of the Pyth price feed contract (defaults to DeployedContracts.BERACHAIN_PYTH_ORACLE if not provided)
+     * @param _xmrUsdPriceId Pyth price feed ID for XMR/USD (defaults to DeployedContracts.XMR_USD_PYTH_PRICE_ID if not provided)
+     * @param _collateralToken Address of the collateral token (e.g., USDC)
+     * @param _owner Address of the contract owner who can adjust parameters
+     * 
+     * The constructor sets up the initial state of the contract, including the Pyth oracle
+     * connection, the specific XMR/USD price feed to use, and the collateral token address.
+     * It also initializes the ERC20 token with the name "Synthetic Monero" and symbol "sXMR".
      */
     constructor(
+        address _pyth,
+        bytes32 _xmrUsdPriceId,
         address _collateralToken,
-        address _pythAddress,
-        bytes32 _priceId,
-        address _lspAdapter
-    ) SyntheticMonero(_collateralToken, _pythAddress, _priceId) {
-        lspAdapter = LSPAdapter(_lspAdapter);
+        address _owner
+    ) ERC20("Synthetic Monero", "sXMR") Ownable(_owner) {
+        // Use provided addresses or default to the deployed contract addresses
+        pyth = IPyth(_pyth != address(0) ? _pyth : DeployedContracts.BERACHAIN_PYTH_ORACLE);
+        xmrUsdPriceId = _xmrUsdPriceId != bytes32(0) ? _xmrUsdPriceId : DeployedContracts.XMR_USD_PYTH_PRICE_ID;
+        collateralToken = _collateralToken;
+        
+        // Initialize with empty update data to get a base fee
+        bytes[] memory emptyUpdateData = new bytes[](0);
+        pythUpdateFee = pyth.getUpdateFee(emptyUpdateData);
     }
     
     /**
-     * @dev Liquidates an undercollateralized position
-     * @param user Address of the user to liquidate
-     * @param priceUpdateData Pyth price update data
-     * @return success Whether the liquidation was successful
+     * @dev Updates the Pyth price feed
+     * @param priceUpdateData The price update data from Pyth
      */
-    function liquidatePosition(address user, bytes[] calldata priceUpdateData) external payable returns (bool) {
+    function updatePrice(bytes[] calldata priceUpdateData) public payable {
+        // Calculate the fee required to update the price feed
+        uint256 fee = pyth.getUpdateFee(priceUpdateData);
+        // Update the price feed with the provided data
+        pyth.updatePriceFeeds{value: fee}(priceUpdateData);
+    }
+    
+    /**
+     * @dev Gets the current XMR/USD price from Pyth
+     * @return price The current price of XMR in USD (scaled by 10^8)
+     */
+    function getXmrUsdPrice() public view returns (int64) {
+        PythStructs.Price memory priceData = pyth.getPrice(xmrUsdPriceId);
+        return priceData.price;
+    }
+    
+    /**
+     * @dev Mint sXMR tokens by depositing collateral
+     * @param collateralAmount Amount of collateral to deposit (in collateral token's smallest units)
+     * @param priceUpdateData The price update data from Pyth (can be empty if no update is needed)
+     * 
+     * This function allows users to mint sXMR tokens by depositing collateral. The amount of sXMR
+     * minted is calculated based on the current XMR/USD price from the Pyth oracle and the
+     * collateralization ratio. If price update data is provided, the function will update the
+     * price feed before minting.
+     * 
+     * The formula used to calculate the amount of sXMR minted is:
+     * sxmrAmount = (collateralAmount * 10^8 * 10000) / (xmrUsdPrice * collateralRatio)
+     * 
+     * This ensures that the value of the collateral is at least collateralRatio% of the value
+     * of the minted sXMR tokens.
+     * 
+     * Requirements:
+     * - The XMR/USD price must be greater than 0
+     * - The user must have approved the contract to spend their collateral tokens
+     */
+    function mintWithCollateral(uint256 collateralAmount, bytes[] calldata priceUpdateData) external payable {
         // Update price feed if data is provided
         if (priceUpdateData.length > 0) {
             uint256 fee = pyth.getUpdateFee(priceUpdateData);
-            require(msg.value >= fee, "Insufficient ETH for price update");
             pyth.updatePriceFeeds{value: fee}(priceUpdateData);
-        }
-        
-        // Check liquidation requirements
-        require(liquidationsEnabled, "Liquidations are disabled");
-        require(!liquidated[user], "Position already liquidated");
-        require(isLiquidatable(user), "Position is not liquidatable");
-        
-        // Get the user's debt and collateral
-        uint256 debt = userMinted[user];
-        uint256 collateral = userCollateral[user];
-        
-        // Mark the position as liquidated
-        liquidated[user] = true;
-        
-        // Calculate liquidation bonus
-        uint256 bonus = (collateral * liquidationBonus) / 10000;
-        uint256 collateralForLiquidator = bonus;
-        uint256 collateralForLSP = collateral - bonus;
-        
-        // Reset the user's position
-        userMinted[user] = 0;
-        userCollateral[user] = 0;
-        
-        // Burn the sXMR tokens
-        _burn(address(this), debt);
-        
-        // Transfer collateral to the liquidator (msg.sender)
-        require(IERC20(collateralToken).transfer(msg.sender, collateralForLiquidator), "Liquidator reward transfer failed");
-        
-        // Transfer remaining collateral to the LSP
-        require(IERC20(collateralToken).transfer(address(lspAdapter), collateralForLSP), "LSP collateral transfer failed");
-        
-        emit LiquidationExecuted(user, debt, collateral, msg.sender);
-        return true;
-    }
-    
-    /**
-     * @dev Checks if a position is liquidatable
-     * @param user Address of the user to check
-     * @return Whether the position is liquidatable
-     */
-    function isLiquidatable(address user) public view returns (bool) {
-        // If the user has already been liquidated, they can't be liquidated again
-        if (liquidated[user]) {
-            return false;
-        }
-        
-        // Get the user's debt and collateral
-        uint256 debt = userMinted[user];
-        uint256 collateral = userCollateral[user];
-        
-        // If the user has no debt, they can't be liquidated
-        if (debt == 0) {
-            return false;
         }
         
         // Get the current XMR/USD price
         int64 xmrUsdPrice = getXmrUsdPrice();
-        if (xmrUsdPrice <= 0) {
-            return false;
+        require(xmrUsdPrice > 0, "Invalid XMR price");
+        
+        // Transfer collateral from user to contract
+        require(
+            IERC20(collateralToken).transferFrom(msg.sender, address(this), collateralAmount),
+            "Collateral transfer failed"
+        );
+        
+        // Calculate how much sXMR can be minted based on collateral and price
+        // Adjust for decimal differences and collateralization ratio
+        uint256 sxmrAmount = (collateralAmount * 10**8 * 10000) / (uint256(uint64(xmrUsdPrice)) * collateralRatio);
+        
+        // Update user's collateral and minted amounts
+        userCollateral[msg.sender] += collateralAmount;
+        userMinted[msg.sender] += sxmrAmount;
+        
+        // Mint sXMR tokens to the user
+        _mint(msg.sender, sxmrAmount);
+        
+        emit Minted(msg.sender, collateralAmount, sxmrAmount);
+    }
+    
+    /**
+     * @dev Burns sXMR tokens and redeems collateral
+     * @param sxmrAmount Amount of sXMR to burn (in sXMR's smallest units)
+     * @param priceUpdateData The price update data from Pyth (can be empty if no update is needed)
+     * 
+     * This function allows users to burn their sXMR tokens and redeem the corresponding amount of
+     * collateral. The amount of collateral redeemed is calculated based on the current XMR/USD price
+     * from the Pyth oracle and the collateralization ratio. If price update data is provided, the
+     * function will update the price feed before burning.
+     * 
+     * The formula used to calculate the amount of collateral redeemed is:
+     * collateralAmount = (sxmrAmount * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10^8 * 10000)
+     * 
+     * Requirements:
+     * - The user must have previously minted at least sxmrAmount of sXMR tokens
+     * - The user must have at least sxmrAmount of sXMR tokens in their balance
+     * - The XMR/USD price must be greater than 0
+     */
+    function burnAndRedeemCollateral(uint256 sxmrAmount, bytes[] calldata priceUpdateData) external payable {
+        require(userMinted[msg.sender] >= sxmrAmount, "Insufficient minted balance");
+        require(balanceOf(msg.sender) >= sxmrAmount, "Insufficient sXMR balance");
+        
+        // Update price feed if data is provided
+        if (priceUpdateData.length > 0) {
+            uint256 fee = pyth.getUpdateFee(priceUpdateData);
+            pyth.updatePriceFeeds{value: fee}(priceUpdateData);
         }
         
-        // Calculate the current collateralization ratio
-        uint256 xmrValue = (debt * uint256(uint64(xmrUsdPrice))) / 10**8;
-        uint256 collateralValue = collateral;
+        // Get the current XMR/USD price
+        int64 xmrUsdPrice = getXmrUsdPrice();
+        require(xmrUsdPrice > 0, "Invalid XMR price");
         
-        // Calculate the collateralization ratio in basis points
-        uint256 collateralizationRatio = (collateralValue * 10000) / xmrValue;
+        // Calculate collateral amount to return based on sXMR amount and price
+        uint256 collateralToReturn = (sxmrAmount * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10**8 * 10000);
         
-        // Return true if the ratio is below the liquidation threshold
-        return collateralizationRatio < liquidationThreshold;
+        // Ensure user has enough collateral
+        require(userCollateral[msg.sender] >= collateralToReturn, "Insufficient collateral");
+        
+        // Update user's collateral and minted amounts
+        userCollateral[msg.sender] -= collateralToReturn;
+        userMinted[msg.sender] -= sxmrAmount;
+        
+        // Burn sXMR tokens from the user
+        _burn(msg.sender, sxmrAmount);
+        
+        // Return collateral to the user
+        require(
+            IERC20(collateralToken).transfer(msg.sender, collateralToReturn),
+            "Collateral transfer failed"
+        );
+        
+        emit Burned(msg.sender, sxmrAmount, collateralToReturn);
     }
     
     /**
-     * @dev Updates the liquidation threshold
-     * @param _liquidationThreshold New liquidation threshold in basis points
+     * @dev Adds additional collateral without minting new tokens
+     * @param collateralAmount Amount of collateral to add
      */
-    function updateLiquidationThreshold(uint256 _liquidationThreshold) external onlyOwner {
-        require(_liquidationThreshold >= 10000, "Threshold must be at least 100%");
-        liquidationThreshold = _liquidationThreshold;
-        emit LiquidationThresholdUpdated(_liquidationThreshold);
+    function addCollateral(uint256 collateralAmount) external {
+        // Transfer collateral from user to contract
+        require(
+            IERC20(collateralToken).transferFrom(msg.sender, address(this), collateralAmount),
+            "Collateral transfer failed"
+        );
+        
+        // Update user's collateral amount
+        userCollateral[msg.sender] += collateralAmount;
+        
+        emit CollateralAdded(msg.sender, collateralAmount);
     }
     
     /**
-     * @dev Updates the liquidation bonus percentage
-     * @param _liquidationBonus New liquidation bonus in basis points
+     * @dev Removes excess collateral without burning tokens
+     * @param collateralAmount Amount of collateral to remove
+     * @param priceUpdateData The price update data from Pyth
      */
-    function updateLiquidationBonus(uint256 _liquidationBonus) external onlyOwner {
-        require(_liquidationBonus <= 1000, "Bonus cannot exceed 10%");
-        liquidationBonus = _liquidationBonus;
-        emit LiquidationBonusUpdated(_liquidationBonus);
+    function removeExcessCollateral(uint256 collateralAmount, bytes[] calldata priceUpdateData) external payable {
+        // Update price feed if data is provided
+        if (priceUpdateData.length > 0) {
+            uint256 fee = pyth.getUpdateFee(priceUpdateData);
+            pyth.updatePriceFeeds{value: fee}(priceUpdateData);
+        }
+        
+        // Get the current XMR/USD price
+        int64 xmrUsdPrice = getXmrUsdPrice();
+        require(xmrUsdPrice > 0, "Invalid XMR price");
+        
+        // Calculate minimum required collateral based on minted sXMR and current price
+        uint256 requiredCollateral = (userMinted[msg.sender] * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10**8 * 10000);
+        
+        // Ensure user has enough excess collateral to remove
+        require(userCollateral[msg.sender] >= requiredCollateral + collateralAmount, "Insufficient excess collateral");
+        
+        // Update user's collateral amount
+        userCollateral[msg.sender] -= collateralAmount;
+        
+        // Return collateral to the user
+        require(
+            IERC20(collateralToken).transfer(msg.sender, collateralAmount),
+            "Collateral transfer failed"
+        );
+        
+        emit CollateralRemoved(msg.sender, collateralAmount);
     }
     
     /**
-     * @dev Toggles liquidations on or off
-     * @param _enabled Whether liquidations should be enabled
+     * @dev Updates the collateralization ratio
+     * @param newRatio New collateralization ratio in basis points (e.g., 15000 for 150%)
      */
-    function toggleLiquidations(bool _enabled) external onlyOwner {
-        liquidationsEnabled = _enabled;
-        emit LiquidationsToggled(_enabled);
+    function updateCollateralRatio(uint256 newRatio) external onlyOwner {
+        require(newRatio >= 10000, "Ratio must be at least 100%");
+        collateralRatio = newRatio;
+        emit CollateralRatioUpdated(newRatio);
     }
     
     /**
-     * @dev Updates the LSP Adapter contract
-     * @param _lspAdapter Address of the new LSP Adapter contract
+     * @dev Checks if a user's position is properly collateralized
+     * @param user Address of the user to check
+     * @return isCollateralized Whether the user's position is properly collateralized
      */
-    function updateLSPAdapter(address _lspAdapter) external onlyOwner {
-        require(_lspAdapter != address(0), "Invalid adapter address");
-        lspAdapter = LSPAdapter(_lspAdapter);
-        emit LSPAdapterUpdated(_lspAdapter);
+    function isCollateralized(address user) public view returns (bool) {
+        if (userMinted[user] == 0) return true;
+        
+        // Get the current XMR/USD price
+        int64 xmrUsdPrice = getXmrUsdPrice();
+        if (xmrUsdPrice <= 0) return false;
+        
+        // Calculate required collateral based on minted sXMR and current price
+        uint256 requiredCollateral = (userMinted[user] * uint256(uint64(xmrUsdPrice)) * collateralRatio) / (10**8 * 10000);
+        
+        return userCollateral[user] >= requiredCollateral;
     }
     
+    // TODO: sus function pyth price price data should not require a fee right? 
     /**
-     * @dev Resets a user's liquidation status
-     * @param user Address of the user
+     * @dev Updates the Pyth update fee
      */
-    function resetLiquidationStatus(address user) external onlyOwner {
-        liquidated[user] = false;
+    function updatePythFee() external {
+        // Initialize with empty update data to get a base fee
+        bytes[] memory emptyUpdateData = new bytes[](0);
+        pythUpdateFee = pyth.getUpdateFee(emptyUpdateData);
     }
-    
-    /**
-     * @dev Allows the contract to receive ETH
-     */
-    receive() external payable {}
 }
