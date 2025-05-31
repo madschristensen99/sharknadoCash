@@ -6,6 +6,7 @@ import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {IPyth} from "./interfaces/IPyth.sol";
 import {PythStructs} from "./interfaces/PythStructs.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {DeployedContracts} from "./DeployedContracts.sol";
 
 /**
  * @title SyntheticMonero
@@ -52,8 +53,8 @@ contract SyntheticMonero is ERC20, Ownable {
     
     /**
      * @dev Constructor to initialize the SyntheticMonero contract
-     * @param _pyth Address of the Pyth price feed contract (e.g., 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729 for Base Sepolia)
-     * @param _xmrUsdPriceId Pyth price feed ID for XMR/USD (bytes32 identifier for the specific price feed)
+     * @param _pyth Address of the Pyth price feed contract (defaults to DeployedContracts.BERACHAIN_PYTH_ORACLE if not provided)
+     * @param _xmrUsdPriceId Pyth price feed ID for XMR/USD (defaults to DeployedContracts.XMR_USD_PYTH_PRICE_ID if not provided)
      * @param _collateralToken Address of the collateral token (e.g., USDC)
      * @param _owner Address of the contract owner who can adjust parameters
      * 
@@ -67,8 +68,9 @@ contract SyntheticMonero is ERC20, Ownable {
         address _collateralToken,
         address _owner
     ) ERC20("Synthetic Monero", "sXMR") Ownable(_owner) {
-        pyth = IPyth(_pyth);
-        xmrUsdPriceId = _xmrUsdPriceId;
+        // Use provided addresses or default to the deployed contract addresses
+        pyth = IPyth(_pyth != address(0) ? _pyth : DeployedContracts.BERACHAIN_PYTH_ORACLE);
+        xmrUsdPriceId = _xmrUsdPriceId != bytes32(0) ? _xmrUsdPriceId : DeployedContracts.XMR_USD_PYTH_PRICE_ID;
         collateralToken = _collateralToken;
         
         // Initialize with empty update data to get a base fee

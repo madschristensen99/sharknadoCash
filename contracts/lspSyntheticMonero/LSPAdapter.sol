@@ -6,6 +6,7 @@ import "../syntheticMonero.sol";
 import "./CrossChainSXMR.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {DeployedContracts} from "../DeployedContracts.sol";
 
 /**
  * @title LSPAdapter
@@ -62,9 +63,9 @@ contract LSPAdapter is Ownable {
     
     /**
      * @dev Constructor
-     * @param _liquidStabilityPool Address of Bera Borrow's Liquid Stability Pool
+     * @param _liquidStabilityPool Address of Bera Borrow's Liquid Stability Pool (defaults to DeployedContracts.LSP_PROXY if not provided)
      * @param _syntheticMonero Address of the Synthetic Monero contract
-     * @param _nectToken Address of the NECT token
+     * @param _nectToken Address of the NECT token (defaults to DeployedContracts.NECT if not provided)
      * @param _owner Address of the contract owner
      * @param _chainId Current chain ID (SEPOLIA_CHAIN_ID or BERACHAIN_CHAIN_ID)
      */
@@ -75,15 +76,26 @@ contract LSPAdapter is Ownable {
         address _owner,
         uint16 _chainId
     ) Ownable(_owner) {
-        liquidStabilityPool = ILiquidStabilityPool(_liquidStabilityPool);
-        syntheticMonero = CrossChainSXMR(_syntheticMonero);
-        nectToken = _nectToken;
         currentChainId = _chainId;
         
-        // If deploying on Berachain, use the fixed LSP address
-        if (_chainId == BERACHAIN_CHAIN_ID && _liquidStabilityPool != address(0)) {
-            require(_liquidStabilityPool == 0x8343a45D793688410A60d67eA17E8ce0ab3C2c24, "Invalid LSP address for Berachain");
+        // Use provided addresses or default to the deployed contract addresses
+        if (_chainId == BERACHAIN_CHAIN_ID) {
+            // On Berachain, use the deployed addresses if not provided
+            address lspAddress = _liquidStabilityPool != address(0) ? _liquidStabilityPool : DeployedContracts.LSP_PROXY;
+            require(
+                lspAddress == DeployedContracts.LSP_IMPLEMENTATION || 
+                lspAddress == DeployedContracts.LSP_PROXY, 
+                "Invalid LSP address for Berachain"
+            );
+            liquidStabilityPool = ILiquidStabilityPool(lspAddress);
+            nectToken = _nectToken != address(0) ? _nectToken : DeployedContracts.NECT;
+        } else {
+            // On other chains, use the provided addresses
+            liquidStabilityPool = ILiquidStabilityPool(_liquidStabilityPool);
+            nectToken = _nectToken;
         }
+        
+        syntheticMonero = CrossChainSXMR(_syntheticMonero);
     }
     
     /**
