@@ -73,8 +73,8 @@
             class="w-full flex flex-col items-center gap-4 justify-center mt-4 p-2 rounded bg-green-500"
             v-if="proofState === 2"
         >
-            <span class="font-bold"> Proof generation failed! </span>
-            <p>{{ error }}</p>
+            <span class="font-bold"> Proof generation successfull! </span>
+            {{ proof }}
         </div>
         <div
             class="w-full flex flex-col items-center gap-4 justify-center mt-4 p-2 rounded bg-red-600"
@@ -87,7 +87,9 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, defineEmits } from "vue";
+
+const emit = defineEmits(["responseReceived"]);
 
 const API_ENDPOINT =
     "https://imaginative-truth-4.up.railway.app/api/zkproof/getProof";
@@ -101,6 +103,7 @@ const xmrRecipient = ref("");
 // 2 success, 3 fail
 const proofState = ref(false);
 const error = ref("");
+const proof = ref("");
 
 function isValidEvmAddress(address) {
     return /^0x[a-fA-F0-9]{40}$/.test(address);
@@ -137,13 +140,33 @@ const submitProof = async () => {
         }
     }
 
-    const proof = {
-        secretKey: secretKey.value,
-        txId: txId.value,
-        evmRecipient,
-        xmrRecipient,
-    };
+    try {
+        const params = new URLSearchParams({
+            txid: txId.value,
+            key: secretKey.value,
+            address: xmrRecipient.value,
+            ethereumRecipientAddress: evmRecipient.value,
+        });
 
-    console.log(proof);
+        const response = await fetch(`${API_ENDPOINT}?${params.toString()}`);
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        proof.value = data;
+        console.log(proof.value);
+
+        emit("proofReceived", data);
+    } catch (err) {
+        error.value = err.message;
+        proofState.value = 3;
+        return;
+    } finally {
+        if (!error.value) {
+            proofState.value = 2;
+        }
+    }
 };
 </script>
