@@ -30,7 +30,7 @@ These features, combined with the LSP integration, create a comprehensive soluti
 - **Instant Settlement**: Immediate minting of sXMR tokens before full Monero confirmation
 - **Risk Management**: Sophisticated risk models to ensure system solvency
 
-## How It Works
+## How It Works (Ideally)
 
 ### Gas Sponsorship Flow
 
