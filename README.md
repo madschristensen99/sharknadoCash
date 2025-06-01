@@ -161,56 +161,12 @@ $ forge install
 $ npm install
 ```
 
-### 🔧 Setting Up Monero Verification
+### 📍 Deployments
 
-The project uses monero-ts to connect to a Monero node for transaction verification:
-
-```shell
-# Install dependencies if you haven't already
-$ npm install
-
-# Run the verification CLI tool
-$ npm run verify-cli
-```
-
-### 🏗️ Build
-
-```shell
-$ forge build
-```
-
-### 🧪 Test
-
-```shell
-$ forge test
-```
-
-### 🚀 Deploy
-
-```shell
-$ forge script script/DeploySharknadoCash.s.sol:DeploySharknadoCash --rpc-url <your_rpc_url> --private-key <your_private_key> --broadcast
-```
-
-### 🌐 Base Sepolia Deployment
-
-The contracts are configured for deployment on Base Sepolia testnet with the following settings:
-
-- Pyth Oracle Address: `0xA2aa501b19aff244D90cc15a4Cf739D2725B5729`
-- XMR/USD Price Feed ID: `0x46b8cc9347f04391764a0361e0b17c3ba394b001e7c304f7650f6376e37c321d`
-
-### 📍 Deployed Contract Addresses
-
-The contracts have been deployed to Base Sepolia at the following addresses:
-
-- SyntheticMonero: `0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519`
-- MoneroNodeVerifier: `0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496`
-- MoneroSwap: `0x34A1D3fff3958843C43aD80F30b94c510645C316`
-
-To deploy to Base Sepolia:
-
-```shell
-$ forge script script/DeploySharknadoCash.s.sol:DeploySharknadoCash --rpc-url https://sepolia.base.org --private-key <your_private_key> --broadcast
-```
+The contracts are the core of the system and are verified on their respective chians:
+- vLayer Prover contract: [0x38998FB1f83E0ff509d22A4369C90675b02F31ee](https://sepolia.etherscan.io/address/0x38998FB1f83E0ff509d22A4369C90675b02F31ee)
+- vLayer Verifier contract: [0xeD0D97311b9D5B311Bdb3C97ff0b2B2980aFca64](https://sepolia.etherscan.io/address/0xeD0D97311b9D5B311Bdb3C97ff0b2B2980aFca64)
+- Berachain synthetic Monero: [0x4807ce5db1316b6b5bfdcc9867e8263fdcae5e52](https://berascan.com/address/0x4807ce5db1316b6b5bfdcc9867e8263fdcae5e52)
 
 ## 🏛️ Architecture
 
