@@ -660,7 +660,10 @@ contract LSPSyntheticMonero is ERC20, Ownable {
     /**
      * @dev Mint sXMR tokens directly after borrowing NECT from a trove
      * This is a convenience function that combines borrowing NECT and minting sXMR
-     * @param nectAmount Amount of NECT to use as collateral
+     * @param maxFeePercentage Maximum fee percentage for the operation
+     * @param nectAmount Amount of NECT to borrow and use as collateral
+     * @param upperHint Upper hint for the trove
+     * @param lowerHint Lower hint for the trove
      * @param priceUpdateData The price update data from Pyth
      */
     function borrowAndMintSXMR(
@@ -678,7 +681,30 @@ contract LSPSyntheticMonero is ERC20, Ownable {
             lowerHint
         );
         
+        // Approve this contract to spend the borrowed NECT
+        IERC20(collateralToken).approve(address(this), nectAmount);
+        
         // Mint sXMR with the borrowed NECT
-        mintWithCollateral(nectAmount, priceUpdateData);
+        // We need to transfer the NECT to this contract first
+        require(
+            IERC20(collateralToken).transferFrom(msg.sender, address(this), nectAmount),
+            "NECT transfer failed"
+        );
+        
+        // Calculate the amount of sXMR to mint based on the current XMR/USD price
+        int64 xmrUsdPrice = getXmrUsdPrice();
+        require(xmrUsdPrice > 0, "Invalid XMR price");
+        
+        // Calculate sXMR amount: (nectAmount * 10^8) / xmrUsdPrice
+        uint256 sxmrAmount = (nectAmount * 10**8) / uint256(uint64(xmrUsdPrice));
+        
+        // Update user's collateral and minted amounts
+        userCollateral[msg.sender] += nectAmount;
+        userMinted[msg.sender] += sxmrAmount;
+        
+        // Mint sXMR tokens to the user
+        _mint(msg.sender, sxmrAmount);
+        
+        emit Minted(msg.sender, nectAmount, sxmrAmount);
     }
 }

@@ -59,3 +59,10 @@ Supports BeraBorrow's borrowing and collateral management operations:
 ### Contract Addresses
 
 Uses the deployed BeraBorrow contract addresses from `DeployedContracts.sol` for seamless integration with the existing BeraBorrow ecosystem.
+
+## Deployment
+
+The LSPSyntheticMonero contract has been deployed on Berachain:
+
+- **Contract Address**: [View on Berachain Explorer](https://bera.blockscout.com/tx/0x0bd1dffcdac1f231ea7a40c39dd3f66b0de3c67fd7ff20039d74fd3f99727038)
+- **Transaction Hash**: `0x0bd1dffcdac1f231ea7a40c39dd3f66b0de3c67fd7ff20039d74fd3f99727038`
