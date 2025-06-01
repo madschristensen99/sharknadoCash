@@ -1,113 +1,61 @@
-# Enhanced sXMR-LSP Bridge: Privacy-Preserving Monero Bridge with Instant Finality
-
-This module connects Bera Borrow's Liquid Stability Pool (LSP) with the SharknadoCash sXMR system, adding privacy-preserving features and instant transaction finality.
+# LSPSyntheticMonero: BeraBorrow Integration
 
 ## Overview
 
-The enhanced sXMR-LSP Bridge builds on the core integration between Bera Borrow's LSP and SharknadoCash, adding two powerful new features:
+The `LSPSyntheticMonero` contract implements a synthetic Monero (sXMR) token backed by NECT collateral with full integration into the BeraBorrow ecosystem. This integration leverages BeraBorrow's innovative features including Proof of Liquidity (PoL) staking, Liquid Stability Pool (LSP), and core borrowing operations.
 
-1. **Gas Sponsorship**: Enables anonymous funding of wallets to preserve Monero's privacy guarantees
-2. **Instant Finality**: Provides immediate settlement of Monero transactions for a small fee
+## Core Features
 
-These features, combined with the LSP integration, create a comprehensive solution that brings Monero's privacy benefits to Berachain while solving key challenges in liquidity, finality, and user experience.
+### Synthetic Monero Token (sXMR)
 
-## Core Components
+- ERC20-compliant token representing synthetic Monero
+- Backed by NECT collateral at a minimum collateralization ratio of 150%
+- Uses Pyth oracle for XMR/USD price feeds
+- Supports minting, burning, and collateral management
 
-### 1. LSP Adapter and Liquidation System
+### BeraBorrow Integration
 
-- **LSP Adapter**: Connects to Bera Borrow's LSP and manages liquidity flow
-- **LSP Synthetic Monero**: Enhanced version of the sXMR token with LSP integration
-- **Liquidation Mechanism**: Efficient liquidation process using LSP liquidity
+#### 1. Proof of Liquidity (PoL) Integration
 
-### 2. Privacy-Preserving Features
+Users can stake their sXMR tokens in a RewardVault to earn BGT rewards:
 
-- **Gas Sponsorship**: Anonymous funding of wallets using commitment schemes
-- **Privacy-Preserving Transactions**: Maintains Monero's privacy guarantees on Berachain
+- **Staking**: Stake sXMR tokens to earn BGT rewards
+- **Unstaking**: Withdraw staked sXMR tokens
+- **Rewards Harvesting**: Claim earned BGT rewards
 
-### 3. Instant Finality Service
+#### 2. Liquid Stability Pool (LSP) Integration
 
-- **Risk Reserve**: Collateral pool that takes on confirmation risk
-- **Instant Settlement**: Immediate minting of sXMR tokens before full Monero confirmation
-- **Risk Management**: Sophisticated risk models to ensure system solvency
+Interacts with BeraBorrow's Liquid Stability Pool for enhanced stability:
 
-## How It Works (Ideally)
+- **Provide to Stability Pool**: Deposit NECT into the Stability Pool
+- **Withdraw from Stability Pool**: Withdraw NECT from the Stability Pool
+- **ETH Gain Management**: View and withdraw ETH gains from the Stability Pool
 
-### Gas Sponsorship Flow
+#### 3. BeraBorrow Core Integration
 
-1. A sponsor creates a commitment hash (keccak256(recipientAddress + salt)) off-chain
-2. The sponsor sends iBGT to the GasSponsor contract with this commitment hash
-3. The recipient claims the sponsored gas using their address and the salt
-4. The recipient can now use the gas for transactions without revealing their funding source
+Supports BeraBorrow's borrowing and collateral management operations:
 
-### Instant Finality Flow
-
-1. A user initiates a Monero to sXMR swap with the InstantFinality service
-2. The service verifies the transaction details and assesses risk
-3. sXMR tokens are minted immediately for the user (before full Monero confirmation)
-4. The service takes on the risk of waiting for Monero confirmations
-5. Once confirmed, the risk reserve is replenished; if rejected, the service absorbs the loss
-
-### LSP Integration Flow
-
-1. The LSP provides liquidity for efficient liquidations in the sXMR system
-2. Liquidations are processed through the LSP Adapter
-3. LSP depositors earn fees from liquidations and instant finality services
-4. The system maintains stability through careful risk management
-
-## Benefits
-
-### For Users
-
-1. **Privacy Preservation**: Maintain Monero's privacy guarantees on Berachain
-2. **Instant Settlement**: No waiting for Monero confirmations
-3. **Lower Collateralization Requirements**: More capital-efficient positions
-4. **Reduced Liquidation Risk**: More efficient and predictable liquidations
-
-### For LSP Depositors
-
-1. **Enhanced Yield**: Earn fees from liquidations and instant finality services
-2. **Diversified Revenue**: Access to multiple fee streams
-3. **Protected Principal**: Comprehensive safety mechanisms
-4. **Growing Ecosystem**: Participate in the expanding Berachain DeFi ecosystem
-
-### For Berachain
-
-1. **Unique Privacy Solution**: First privacy-preserving synthetic asset on Berachain
-2. **Cross-Chain Liquidity**: Bridge between Monero and Berachain ecosystems
-3. **Ecosystem Growth**: Attracts privacy-focused users to Berachain
-4. **Innovative DeFi Primitives**: Introduces new DeFi building blocks to the ecosystem
+- **Trove Management**: Open, close, and adjust troves
+- **Collateral Operations**: Add or withdraw ETH collateral
+- **Debt Operations**: Borrow or repay NECT
+- **Combined Operations**: Borrow NECT and mint sXMR in a single transaction
 
 ## Technical Implementation
 
-### Key Contracts
+### Key Components
 
-- `LSPAdapter.sol`: Manages liquidity flow between LSP and sXMR
-- `LSPSyntheticMonero.sol`: Enhanced sXMR token with LSP integration
-- `GasSponsor.sol`: Enables anonymous funding of wallets
-- `InstantFinality.sol`: Provides immediate settlement of Monero transactions
+- `LSPSyntheticMonero.sol`: Main contract implementing the synthetic Monero token with BeraBorrow integration
+- Integration with BeraBorrow contracts via interfaces:
+  - `IRewardVault.sol`: Interface for PoL staking and rewards
+  - `IRewardVaultFactory.sol`: Interface for creating RewardVaults
+  - `ILSP.sol`: Interface for Liquid Stability Pool interactions
+  - `IBorrowerOperations.sol`: Interface for BeraBorrow's borrowing operations
 
-### Integration with Monero Verification
+### Oracle Integration
 
-- Uses the existing Monero verification system with vLayer Web Proofs
-- Leverages the Monero stagenet wallet (`sharknadowallet`) for transaction verification
-- Integrates with the Monero Transaction Verifier server for confirmations
+- Uses Pyth oracle for XMR/USD price feeds
+- Supports price feed updates with proper validation
 
-### Berachain-Specific Features
+### Contract Addresses
 
-- Uses Berachain's native Pyth oracle (0x2880aB155794e7179c9eE2e38200202908C17B43) for price feeds
-- Optimized for Berachain's gas model and transaction flow
-- Designed to integrate with other Berachain DeFi protocols
-
-## Security Considerations
-
-1. **Commitment Scheme Security**: The gas sponsorship uses secure commitment schemes
-2. **Risk Management**: The instant finality service uses sophisticated risk models
-3. **Liquidation Parameters**: Carefully tuned to ensure LSP depositors are protected
-4. **Oracle Security**: Uses Pyth's secure price feeds with proper update mechanisms
-
-## Future Enhancements
-
-1. **Zero-Knowledge Proofs**: Enhance privacy with zk-SNARKs or zk-STARKs
-2. **Cross-Chain Expansion**: Extend to other EVM-compatible chains
-3. **Governance Integration**: Allow stakeholders to vote on system parameters
-4. **Additional Privacy Features**: Implement mixers, shielded transactions, etc.
+Uses the deployed BeraBorrow contract addresses from `DeployedContracts.sol` for seamless integration with the existing BeraBorrow ecosystem.

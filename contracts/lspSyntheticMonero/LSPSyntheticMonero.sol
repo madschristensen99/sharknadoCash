@@ -6,11 +6,15 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPyth} from "../interfaces/IPyth.sol";
 import {PythStructs} from "../interfaces/PythStructs.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {DeployedContracts} from "./DeployedContracts.sol";
+import {DeployedContracts} from "../DeployedContracts.sol";
+import {IRewardVault} from "../interfaces/IRewardVault.sol";
+import {IRewardVaultFactory} from "../interfaces/IRewardVaultFactory.sol";
+import {ILSP} from "../interfaces/ILSP.sol";
+import {IBorrowerOperations} from "../interfaces/IBorrowerOperations.sol";
 
 /**
- * @title SyntheticMonero
- * @dev Implementation of a synthetic Monero (sXMR) token backed by NECT collateral.
+ * @title LSPSyntheticMonero
+ * @dev Implementation of a synthetic Monero (sXMR) token backed by NECT collateral with BeraBorrow integration.
  * 
  * This contract allows users to mint sXMR tokens by depositing NECT (a USD stablecoin) as collateral,
  * with the amount of sXMR minted based on the current XMR/USD price from the Pyth oracle.
@@ -21,8 +25,13 @@ import {DeployedContracts} from "./DeployedContracts.sol";
  * 
  * Price data is obtained from the Pyth Network oracle, which provides reliable and
  * up-to-date XMR/USD price feeds.
+ * 
+ * BeraBorrow Integration Features:
+ * 1. Proof of Liquidity (PoL) - Users can stake their sXMR tokens in a RewardVault to earn BGT rewards
+ * 2. Liquid Stability Pool (LSP) - Integration with BeraBorrow's LSP for stability
+ * 3. BeraBorrow Core - Integration with BeraBorrow's borrowing operations
  */
-contract SyntheticMonero is ERC20, Ownable {
+contract LSPSyntheticMonero is ERC20, Ownable {
     // Pyth price feed contract
     IPyth public pyth;
     
@@ -44,26 +53,47 @@ contract SyntheticMonero is ERC20, Ownable {
     // Price update fee for Pyth
     uint256 public pythUpdateFee;
     
+    // BeraBorrow Integration - Proof of Liquidity (PoL)
+    address public rewardVault;
+    IRewardVaultFactory public rewardVaultFactory;
+    
+    // BeraBorrow Integration - Liquid Stability Pool (LSP)
+    ILSP public liquidityStabilityPool;
+    
+    // BeraBorrow Integration - BeraBorrow Core
+    IBorrowerOperations public borrowerOperations;
+    
     // Events
     event Minted(address indexed user, uint256 nectAmount, uint256 sxmrAmount);
     event Burned(address indexed user, uint256 sxmrAmount, uint256 nectAmount);
     event CollateralAdded(address indexed user, uint256 amount);
     event CollateralRemoved(address indexed user, uint256 amount);
     event CollateralRatioUpdated(uint256 newRatio);
+    event TokensStaked(address indexed user, uint256 amount);
+    event TokensUnstaked(address indexed user, uint256 amount);
+    event RewardsHarvested(address indexed user, uint256 amount);
+    event ProvidedToStabilityPool(address indexed user, uint256 amount);
+    event WithdrawnFromStabilityPool(address indexed user, uint256 amount);
     
     /**
-     * @dev Constructor to initialize the SyntheticMonero contract
+     * @dev Constructor to initialize the LSPSyntheticMonero contract with BeraBorrow integration
      * 
      * The constructor sets up the initial state of the contract using the deployed contract addresses
      * from DeployedContracts library. It initializes the Pyth oracle connection, XMR/USD price feed,
-     * and NECT token address. The deployer automatically becomes the contract owner.
-     * It also initializes the ERC20 token with the name "Synthetic Monero" and symbol "sXMR".
+     * NECT token address, and BeraBorrow integration components. The deployer automatically becomes 
+     * the contract owner. It also initializes the ERC20 token with the name "Synthetic Monero" and 
+     * symbol "sXMR".
      */
     constructor() ERC20("Synthetic Monero", "sXMR") Ownable(msg.sender) {
         // Use the deployed contract addresses from DeployedContracts library
         pyth = IPyth(DeployedContracts.BERACHAIN_PYTH_ORACLE);
         xmrUsdPriceId = DeployedContracts.XMR_USD_PYTH_PRICE_ID;
         collateralToken = DeployedContracts.NECT;
+        
+        // Initialize BeraBorrow integration components
+        rewardVaultFactory = IRewardVaultFactory(DeployedContracts.FACTORY);
+        liquidityStabilityPool = ILSP(DeployedContracts.LSP_PROXY);
+        borrowerOperations = IBorrowerOperations(DeployedContracts.BORROWER_OPERATIONS);
         
         // Note: Removed pyth.getUpdateFee() call from constructor to avoid deployment issues
         // Fee will be calculated when needed in actual function calls
@@ -310,5 +340,345 @@ contract SyntheticMonero is ERC20, Ownable {
         
         // Calculate current ratio: (collateral * 10000) / mintedValueUsd
         ratio = (userCollateral[user] * 10000) / mintedValueUsd;
+    }
+    
+    /**
+     * @dev Initialize or get the RewardVault for sXMR tokens (PoL integration)
+     * This allows users to stake their sXMR tokens and earn BGT rewards through BeraBorrow's PoL system
+     * @return Address of the RewardVault for sXMR tokens
+     */
+    function initializeRewardVault() public returns (address) {
+        // If the RewardVault is already initialized, return its address
+        if (rewardVault != address(0)) {
+            return rewardVault;
+        }
+        
+        // Check if a RewardVault already exists for this token
+        address existingVault = rewardVaultFactory.getVault(address(this));
+        
+        // If a RewardVault already exists, use it
+        if (existingVault != address(0)) {
+            rewardVault = existingVault;
+            return rewardVault;
+        }
+        
+        // Otherwise, create a new RewardVault
+        rewardVault = rewardVaultFactory.createRewardVault(address(this));
+        
+        return rewardVault;
+    }
+    
+    /**
+     * @dev Stake sXMR tokens in the RewardVault to earn BGT rewards (PoL integration)
+     * @param amount Amount of sXMR tokens to stake
+     */
+    function stakeSXMR(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        require(balanceOf(msg.sender) >= amount, "Insufficient sXMR balance");
+        
+        // Ensure the RewardVault is initialized
+        address vault = initializeRewardVault();
+        
+        // Transfer sXMR tokens to this contract
+        _transfer(msg.sender, address(this), amount);
+        
+        // Approve the RewardVault to spend the tokens
+        _approve(address(this), vault, amount);
+        
+        // Stake the tokens in the RewardVault on behalf of the user
+        IRewardVault(vault).delegateStake(msg.sender, amount);
+        
+        emit TokensStaked(msg.sender, amount);
+    }
+    
+    /**
+     * @dev Unstake sXMR tokens from the RewardVault
+     * @param amount Amount of sXMR tokens to unstake
+     */
+    function unstakeSXMR(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        require(rewardVault != address(0), "RewardVault not initialized");
+        
+        // Get the amount staked by this contract on behalf of the user
+        uint256 stakedAmount = IRewardVault(rewardVault).getDelegateStake(msg.sender, address(this));
+        require(stakedAmount >= amount, "Insufficient staked balance");
+        
+        // Withdraw the tokens from the RewardVault
+        IRewardVault(rewardVault).delegateWithdraw(msg.sender, amount);
+        
+        // Transfer the tokens back to the user
+        _transfer(address(this), msg.sender, amount);
+        
+        emit TokensUnstaked(msg.sender, amount);
+    }
+    
+    /**
+     * @dev Harvest BGT rewards from the RewardVault
+     * @param recipient Address to receive the rewards
+     * @return Amount of rewards harvested
+     */
+    function harvestRewards(address recipient) external returns (uint256) {
+        require(rewardVault != address(0), "RewardVault not initialized");
+        require(recipient != address(0), "Invalid recipient");
+        
+        // Claim rewards from the RewardVault
+        uint256 rewards = IRewardVault(rewardVault).getReward(msg.sender, recipient);
+        
+        emit RewardsHarvested(msg.sender, rewards);
+        
+        return rewards;
+    }
+    
+    /**
+     * @dev Get the amount of sXMR tokens staked by a user in the RewardVault
+     * @param user Address of the user
+     * @return Amount of sXMR tokens staked
+     */
+    function getStakedSXMR(address user) external view returns (uint256) {
+        if (rewardVault == address(0)) return 0;
+        
+        return IRewardVault(rewardVault).getDelegateStake(user, address(this));
+    }
+    
+    // ==================== Liquid Stability Pool (LSP) Integration ====================
+    
+    /**
+     * @dev Provide NECT to the Stability Pool
+     * This allows users to provide NECT to BeraBorrow's Stability Pool directly through this contract
+     * @param amount Amount of NECT to provide
+     */
+    function provideToStabilityPool(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        
+        // Transfer NECT from the user to this contract
+        require(
+            IERC20(collateralToken).transferFrom(msg.sender, address(this), amount),
+            "NECT transfer failed"
+        );
+        
+        // Approve the LSP to spend the NECT
+        IERC20(collateralToken).approve(address(liquidityStabilityPool), amount);
+        
+        // Provide NECT to the Stability Pool
+        liquidityStabilityPool.provideToSP(amount);
+        
+        emit ProvidedToStabilityPool(msg.sender, amount);
+    }
+    
+    /**
+     * @dev Withdraw NECT from the Stability Pool
+     * @param amount Amount of NECT to withdraw
+     */
+    function withdrawFromStabilityPool(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        
+        // Get the current deposit in the Stability Pool
+        uint256 currentDeposit = liquidityStabilityPool.getDepositorNECTDeposit(address(this));
+        require(currentDeposit >= amount, "Insufficient deposit in Stability Pool");
+        
+        // Withdraw NECT from the Stability Pool
+        liquidityStabilityPool.withdrawFromSP(amount);
+        
+        // Transfer NECT to the user
+        require(
+            IERC20(collateralToken).transfer(msg.sender, amount),
+            "NECT transfer failed"
+        );
+        
+        emit WithdrawnFromStabilityPool(msg.sender, amount);
+    }
+    
+    /**
+     * @dev Get the current deposit in the Stability Pool
+     * @return Amount of NECT deposited in the Stability Pool by this contract
+     */
+    function getStabilityPoolDeposit() external view returns (uint256) {
+        return liquidityStabilityPool.getDepositorNECTDeposit(address(this));
+    }
+    
+    /**
+     * @dev Get the ETH gain from the Stability Pool
+     * @return Amount of ETH gained from the Stability Pool by this contract
+     */
+    function getStabilityPoolETHGain() external view returns (uint256) {
+        return liquidityStabilityPool.getDepositorETHGain(address(this));
+    }
+    
+    /**
+     * @dev Withdraw ETH gain from the Stability Pool to a trove
+     * @param upperHint Upper hint for the trove
+     * @param lowerHint Lower hint for the trove
+     */
+    function withdrawETHGainToTrove(address upperHint, address lowerHint) external onlyOwner {
+        liquidityStabilityPool.withdrawETHGainToTrove(upperHint, lowerHint);
+    }
+    
+    // ==================== BeraBorrow Core Integration ====================
+    
+    /**
+     * @dev Open a trove in the BeraBorrow system
+     * This allows users to borrow NECT against ETH collateral
+     * @param maxFeePercentage Maximum fee percentage for the operation
+     * @param nectAmount Amount of NECT to borrow
+     * @param upperHint Upper hint for the trove
+     * @param lowerHint Lower hint for the trove
+     */
+    function openTrove(
+        uint256 maxFeePercentage,
+        uint256 nectAmount,
+        address upperHint,
+        address lowerHint
+    ) external payable {
+        // Call BorrowerOperations to open a trove
+        borrowerOperations.openTrove{value: msg.value}(
+            maxFeePercentage,
+            nectAmount,
+            upperHint,
+            lowerHint
+        );
+        
+        // If the user wants to use the borrowed NECT to mint sXMR, they can call mintWithCollateral separately
+    }
+    
+    /**
+     * @dev Add ETH collateral to a trove
+     * @param upperHint Upper hint for the trove
+     * @param lowerHint Lower hint for the trove
+     */
+    function addCollateralToTrove(
+        address upperHint,
+        address lowerHint
+    ) external payable {
+        // Call BorrowerOperations to add collateral to a trove
+        borrowerOperations.addColl{value: msg.value}(upperHint, lowerHint);
+    }
+    
+    /**
+     * @dev Withdraw ETH collateral from a trove
+     * @param collWithdrawal Amount of ETH to withdraw
+     * @param upperHint Upper hint for the trove
+     * @param lowerHint Lower hint for the trove
+     */
+    function withdrawCollateralFromTrove(
+        uint256 collWithdrawal,
+        address upperHint,
+        address lowerHint
+    ) external {
+        // Call BorrowerOperations to withdraw collateral from a trove
+        borrowerOperations.withdrawColl(collWithdrawal, upperHint, lowerHint);
+    }
+    
+    /**
+     * @dev Withdraw NECT from a trove
+     * @param maxFeePercentage Maximum fee percentage for the operation
+     * @param nectAmount Amount of NECT to withdraw
+     * @param upperHint Upper hint for the trove
+     * @param lowerHint Lower hint for the trove
+     */
+    function withdrawNECTFromTrove(
+        uint256 maxFeePercentage,
+        uint256 nectAmount,
+        address upperHint,
+        address lowerHint
+    ) external {
+        // Call BorrowerOperations to withdraw NECT from a trove
+        borrowerOperations.withdrawNECT(maxFeePercentage, nectAmount, upperHint, lowerHint);
+    }
+    
+    /**
+     * @dev Repay NECT to a trove
+     * @param nectAmount Amount of NECT to repay
+     * @param upperHint Upper hint for the trove
+     * @param lowerHint Lower hint for the trove
+     */
+    function repayNECTToTrove(
+        uint256 nectAmount,
+        address upperHint,
+        address lowerHint
+    ) external {
+        // Transfer NECT from the user to this contract
+        require(
+            IERC20(collateralToken).transferFrom(msg.sender, address(this), nectAmount),
+            "NECT transfer failed"
+        );
+        
+        // Approve BorrowerOperations to spend the NECT
+        IERC20(collateralToken).approve(address(borrowerOperations), nectAmount);
+        
+        // Call BorrowerOperations to repay NECT to a trove
+        borrowerOperations.repayNECT(nectAmount, upperHint, lowerHint);
+    }
+    
+    /**
+     * @dev Close a trove
+     */
+    function closeTrove() external {
+        // Call BorrowerOperations to close a trove
+        borrowerOperations.closeTrove();
+    }
+    
+    /**
+     * @dev Adjust a trove by modifying collateral and debt
+     * @param maxFeePercentage Maximum fee percentage for the operation
+     * @param collWithdrawal Amount of ETH to withdraw
+     * @param nectChange Amount of NECT to change
+     * @param isDebtIncrease Whether the debt is increasing
+     * @param upperHint Upper hint for the trove
+     * @param lowerHint Lower hint for the trove
+     */
+    function adjustTrove(
+        uint256 maxFeePercentage,
+        uint256 collWithdrawal,
+        uint256 nectChange,
+        bool isDebtIncrease,
+        address upperHint,
+        address lowerHint
+    ) external payable {
+        // If this is a debt increase, we need to handle the NECT transfer
+        if (!isDebtIncrease && nectChange > 0) {
+            // Transfer NECT from the user to this contract
+            require(
+                IERC20(collateralToken).transferFrom(msg.sender, address(this), nectChange),
+                "NECT transfer failed"
+            );
+            
+            // Approve BorrowerOperations to spend the NECT
+            IERC20(collateralToken).approve(address(borrowerOperations), nectChange);
+        }
+        
+        // Call BorrowerOperations to adjust the trove
+        borrowerOperations.adjustTrove{value: msg.value}(
+            maxFeePercentage,
+            collWithdrawal,
+            nectChange,
+            isDebtIncrease,
+            upperHint,
+            lowerHint
+        );
+    }
+    
+    /**
+     * @dev Mint sXMR tokens directly after borrowing NECT from a trove
+     * This is a convenience function that combines borrowing NECT and minting sXMR
+     * @param nectAmount Amount of NECT to use as collateral
+     * @param priceUpdateData The price update data from Pyth
+     */
+    function borrowAndMintSXMR(
+        uint256 maxFeePercentage,
+        uint256 nectAmount,
+        address upperHint,
+        address lowerHint,
+        bytes[] calldata priceUpdateData
+    ) external payable {
+        // Open a trove and borrow NECT
+        borrowerOperations.openTrove{value: msg.value}(
+            maxFeePercentage,
+            nectAmount,
+            upperHint,
+            lowerHint
+        );
+        
+        // Mint sXMR with the borrowed NECT
+        mintWithCollateral(nectAmount, priceUpdateData);
     }
 }
