@@ -1,4 +1,4 @@
-import { ethers } from 'ethers'
+import { BigNumber, ethers } from 'ethers'
 import { task } from 'hardhat/config'
 
 import { createGetHreByEid, createProviderFactory, getEidForNetworkName } from '@layerzerolabs/devtools-evm-hardhat'
@@ -25,7 +25,7 @@ task('lz:oft:send', 'Send tokens cross-chain using LayerZero technology')
         const sparkletAdapterContractFactory = await hre.ethers.getContractFactory('sXMRAdapter', wallet)
         const sparkletAdapter = sparkletAdapterContractFactory.attach(contractA)
 
-        const amount = hre.ethers.utils.parseEther(taskArgs.amount)
+        const amount = hre.ethers.utils.parseUnits(taskArgs.amount, 12)
         const options = Options.newOptions().addExecutorLzReceiveOption(200000, 0).toHex().toString()
         const recipientAddressBytes32 = hre.ethers.utils.hexZeroPad(recipientB, 32)
 
@@ -37,7 +37,7 @@ task('lz:oft:send', 'Send tokens cross-chain using LayerZero technology')
         console.log('Estimated native fee:', nativeFee.toString())
 
         // Fetch the current gas price
-        const gasPrice = await provider.getGasPrice()
+        const gasPrice = Math.floor((await provider.getGasPrice()).toNumber() * 1)
 
         // Prepare send parameters
         const sendParam = [eidB, recipientAddressBytes32, amount, amount, options, '0x', '0x']
@@ -47,8 +47,9 @@ task('lz:oft:send', 'Send tokens cross-chain using LayerZero technology')
         try {
             const tx = await sparkletAdapter.send(sendParam, feeParam, wallet.address, {
                 value: nativeFee,
-                gasPrice,
-            })
+                gasPrice, // Increase gas price by 20%
+                gasLimit: 10000000,
+            },)
             console.log('Transaction hash:', tx.hash)
             await tx.wait()
             console.log(

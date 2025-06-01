@@ -73,6 +73,7 @@ const config: HardhatUserConfig = {
                 tokenAddress: '0x76B1Dc0256913250D88209a86ecedb609D184732',
             },
             gas: 100000000,
+            gasPrice: 1000000000, // 1 gwei
             // gasLimit: 10000000,
         },
         'base-mainnet': {
