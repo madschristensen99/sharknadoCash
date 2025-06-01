@@ -4,11 +4,12 @@
 // - Duplicate .env.example file and name it .env
 // - Fill in the environment variables
 import 'dotenv/config'
-import './tasks'
 import 'hardhat-deploy'
 import 'hardhat-contract-sizer'
 import '@nomiclabs/hardhat-ethers'
 import '@layerzerolabs/toolbox-hardhat'
+import './tasks'
+
 import { HardhatUserConfig, HttpNetworkAccountsUserConfig } from 'hardhat/types'
 
 import { EndpointId } from '@layerzerolabs/lz-definitions'
@@ -69,8 +70,11 @@ const config: HardhatUserConfig = {
             accounts,
             chainId: 11155111,
             oftAdapter: {
-                tokenAddress: 'someAddr',
+                tokenAddress: '0x76B1Dc0256913250D88209a86ecedb609D184732',
             },
+            gas: 100000000,
+            gasPrice: 1000000000, // 1 gwei
+            // gasLimit: 10000000,
         },
         'base-mainnet': {
             eid: EndpointId.BASE_V2_MAINNET,

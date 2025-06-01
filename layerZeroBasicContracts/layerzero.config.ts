@@ -26,30 +26,10 @@ const config: OAppOmniGraphHardhat = {
         {
             from: baseSepoliaContract,
             to: sepoliaContract,
-            config: {
-                enforcedOptions: [
-                    {
-                        msgType: 1, // depending on OAppOptionType3
-                        optionType: ExecutorOptionType.LZ_RECEIVE,
-                        gas: 100000, // gas limit in wei for EndpointV2.lzReceive
-                        value: 0, // msg.value in wei for EndpointV2.lzReceive
-                      },
-                ]
-            }
         },
         {
             from: sepoliaContract,
             to: baseSepoliaContract,
-            config: {
-                enforcedOptions: [
-                    {
-                        msgType: 1, // depending on OAppOptionType3
-                        optionType: ExecutorOptionType.LZ_RECEIVE,
-                        gas: 100000, // gas limit in wei for EndpointV2.lzReceive
-                        value: 0, // msg.value in wei for EndpointV2.lzReceive
-                      },
-                ]
-            }
         },
     ],
 }

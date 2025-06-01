@@ -5,7 +5,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { OFT } from "@layerzerolabs/oft-evm/contracts/OFT.sol";
 
 contract sXMR is OFT {
-    constructor(
+   constructor(
         string memory _name,
         string memory _symbol,
         address _lzEndpoint,
