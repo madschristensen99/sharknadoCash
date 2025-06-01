@@ -226,7 +226,7 @@ The project uses monero-ts for Monero transaction verification and vLayer Web Pr
 
 ### ⚙️ How the Verification System Works
 
-1. **Swap Initiation**: Alice locks her sXMR in the MoneroSwap contract, which automatically generates a unique Monero address for Bob to send XMR to.
+1. **Swap Initiation**: Alice locks her sXMR in the MoneroSwap contract, which and designates a unique Monero address for Bob to send XMR to.
 
 2. **Monero Payment**: Bob sends XMR to the specified Monero address. When sending the transaction, Bob receives:
    - **Transaction Hash**: The unique identifier of the transaction on the Monero blockchain
@@ -243,54 +243,9 @@ The project uses monero-ts for Monero transaction verification and vLayer Web Pr
 
 6. **Automatic Swap Completion**: Once verified, the MoneroSwap contract automatically releases the locked sXMR tokens to Bob.
 
-### 🖥️ Using the Verification CLI Tool
-
-The project includes a CLI tool to verify Monero transactions and claim swaps:
-
-```bash
-$ npm run verify-cli
-```
-
-This interactive tool will prompt you for:
-
-- Transaction hash
-- Transaction key/secret
-
-The system automatically knows the recipient Monero address and expected amount from the swap details. It will verify the transaction and handle the Web Proof generation internally.
-
 ### 💻 Programmatic Usage
 
 You can also use the verification system programmatically:
-
-```javascript
-// Import the verification functions
-const { verifyTransaction, claimSwap } = require('./scripts/monero-verification');
-
-// Verify a transaction (moneroAddress and expectedAmount are retrieved from the swap)
-const result = await verifyTransaction(txHash, txKey);
-
-// Claim a swap (only transaction hash and key are needed)
-const claimResult = await claimSwap(txHash, txKey);
-```
-
-### 💰 Swap Claiming
-
-To claim a swap, you only need:
-- `txHash`: The hash of the Monero transaction to verify
-- `txKey`: The transaction key/secret that proves ownership of the transaction
-
-The system handles everything else automatically, including:
-- Finding the appropriate swap based on the transaction details
-- Generating the vLayer Web Proof
-- Verifying the transaction amount and confirmations
-- Releasing the locked sXMR tokens
-
-Example of claiming a swap using the smart contract:
-
-```solidity
-// Claim a swap with the MoneroSwap contract
-moneroSwap.claimSwap(txHash, txKey);
-```
 
 ## Security Considerations
 
@@ -299,7 +254,7 @@ moneroSwap.claimSwap(txHash, txKey);
 - **Trustless Verification**: The entire verification process is trustless, with cryptographic proofs verified on-chain
 - **Price Oracle Security**: The system relies on accurate price feeds from Pyth
 - **Proper Collateralization**: Maintaining adequate collateralization is essential for system stability
-- **vLayer Web Proof Integrity**: The cryptographic integrity of vLayer Web Proofs is critical for secure XMR-sXMR swaps
+- **vLayer Web Proof Integrity**: The cryptographic integrity of vLayer Web Proofs is critical for secure XMR-sXMR swaps. Adiitioanlly, the current implementation relies on a single cnetralized endpoint to recieve the monero data. In a more developed implementation, the proof would also verfiy that the monero data sourcing was trsutless, prehaps by ensuring the code was a trusted piece of code on IPFS
 
 ## License
 
