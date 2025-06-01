@@ -64,5 +64,4 @@ Uses the deployed BeraBorrow contract addresses from `DeployedContracts.sol` for
 
 The LSPSyntheticMonero contract has been deployed on Berachain:
 
-- **Contract Address**: [View on Berachain Explorer](https://bera.blockscout.com/tx/0x0bd1dffcdac1f231ea7a40c39dd3f66b0de3c67fd7ff20039d74fd3f99727038)
-- **Transaction Hash**: `0x0bd1dffcdac1f231ea7a40c39dd3f66b0de3c67fd7ff20039d74fd3f99727038`
+- **Contract Address**: [View on Berachain Explorer](https://berascan.com/address/0x7Dd96E7e89be37256a40BeD03504FAD96Ec89BBB#code)
