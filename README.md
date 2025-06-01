@@ -216,9 +216,9 @@ $ forge script script/DeploySharknadoCash.s.sol:DeploySharknadoCash --rpc-url ht
 
 The system consists of three main contracts:
 
-1. **SyntheticMonero.sol**: ERC20 token implementation with collateral management
-2. **MoneroSwap.sol**: Handles locking sXMR and claiming with proof of XMR payment
-3. **MoneroNodeVerifier.sol**: Verifies Monero transactions using vLayer Web Proofs
+1. **contracts/lspSyntheticMonero/LSPSyntheticMonero.sol**: ERC20 token implementation with collateral management. We also have an lspSyntheticMonero.sol specifically for using Beraborrow LSP
+2. **contracts/sXMRVlayer/src/vlayerWebProofProver.sol**: Handles locking sXMR and claiming with proof of XMR payment
+3. **contracts/sXMRVlayer/src/vlayerMoneroNodeVerifier.sol**: Verifies Monero transactions using vLayer Web Proofs
 
 ## 🔍 Monero Transaction Verification with monero-ts and vLayer Web Proofs
 
@@ -262,8 +262,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgements
 
-- monero-ts for Monero transaction verification
 - vLayer for Web Proofs technology
 - Pyth Network for price oracle data
 - OpenZeppelin for secure contract implementations
-- Foundry for development tools
+- Foundry and Hardhat for development tools
