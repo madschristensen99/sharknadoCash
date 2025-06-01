@@ -2,6 +2,8 @@ const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
+const ethers = require('ethers');
+
 require('dotenv').config();
 
 const app = express();
@@ -163,6 +165,8 @@ app.get('/verify', async (req, res) => {
         match
       });
     });
+
+    const decimals = 12;
     
     // Make sure we highlight the verified amount clearly
     const verifiedAmount = outputs.find(output => output.match)?.amount || 'not found';
@@ -178,6 +182,7 @@ app.get('/verify', async (req, res) => {
     // Return JSON response
     return res.json({
       success: true,
+      amount: Number(ethers.parseUnits(verifiedAmount, decimals).toString()),
       transaction: {
         txid,
         block: blockNumber,
