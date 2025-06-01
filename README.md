@@ -27,6 +27,30 @@ SharknadoCash is a system for creating and managing synthetic Monero (sXMR) toke
 ![Synthetic Monero UI](assets/sharknadoUI.png)
 
 **[Try our live demo](https://fungerbil.com/sharknado/index.html)** to experience the mint/burn interface for sXMR tokens.
+## 🧩 Key Components
+
+### 💎 SyntheticMonero (sXMR) Token
+
+A collateral-backed synthetic asset that tracks the price of Monero (XMR). Features include:
+
+- Minting sXMR by depositing collateral
+- Burning sXMR to redeem collateral
+- Collateralization ratio management
+- Integration with Pyth price oracle for XMR/USD price feeds
+  
+Berachain synthetic Monero: [0x4807ce5db1316b6b5bfdcc9867e8263fdcae5e52](https://berascan.com/address/0x4807ce5db1316b6b5bfdcc9867e8263fdcae5e52)
+
+### 🔄 MoneroSwap
+
+A contract structure that enables 1:1 swaps between sXMR and real XMR. The process works as follows:
+
+1. Alice locks her sXMR in the contract, specifying her Monero address
+2. Bob pays Alice's Monero address with real XMR
+3. Bob provides proof of this payment using vLayer Web Proofs and in doing so claims the locked sXMR from the contract
+   
+- vLayer Prover contract: [0x38998FB1f83E0ff509d22A4369C90675b02F31ee](https://sepolia.etherscan.io/address/0x38998FB1f83E0ff509d22A4369C90675b02F31ee)
+- vLayer Verifier contract: [0xeD0D97311b9D5B311Bdb3C97ff0b2B2980aFca64](https://sepolia.etherscan.io/address/0xeD0D97311b9D5B311Bdb3C97ff0b2B2980aFca64)
+
 
 ## 📁 Repository Structure
 
@@ -77,25 +101,6 @@ Monero transaction verification server:
 - Connects to Monero stagenet node
 - Verifies transaction details using the Monero wallet
 - Provides verification endpoints for the bridge
-
-## 🧩 Key Components
-
-### 💎 SyntheticMonero (sXMR) Token
-
-A collateral-backed synthetic asset that tracks the price of Monero (XMR). Features include:
-
-- Minting sXMR by depositing collateral
-- Burning sXMR to redeem collateral
-- Collateralization ratio management
-- Integration with Pyth price oracle for XMR/USD price feeds
-
-### 🔄 MoneroSwap
-
-A contract that enables 1:1 swaps between sXMR and real XMR. The process works as follows:
-
-1. Alice locks her sXMR in the contract, specifying her Monero address
-2. Bob pays Alice's Monero address with real XMR
-3. Bob provides proof of this payment using vLayer Web Proofs and in doing so claims the locked sXMR from the contract
 
 ### ✅ MoneroNodeVerifier
 
@@ -163,13 +168,6 @@ $ cd sharknadoCash
 $ forge install
 $ npm install
 ```
-
-### 📍 Deployments
-
-The contracts are the core of the system and are verified on their respective chians:
-- vLayer Prover contract: [0x38998FB1f83E0ff509d22A4369C90675b02F31ee](https://sepolia.etherscan.io/address/0x38998FB1f83E0ff509d22A4369C90675b02F31ee)
-- vLayer Verifier contract: [0xeD0D97311b9D5B311Bdb3C97ff0b2B2980aFca64](https://sepolia.etherscan.io/address/0xeD0D97311b9D5B311Bdb3C97ff0b2B2980aFca64)
-- Berachain synthetic Monero: [0x4807ce5db1316b6b5bfdcc9867e8263fdcae5e52](https://berascan.com/address/0x4807ce5db1316b6b5bfdcc9867e8263fdcae5e52)
 
 ## 🏛️ Architecture
 
